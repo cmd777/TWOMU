@@ -7,23 +7,27 @@ import (
 	memory "main/memory"
 	"math"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
 )
 
 var (
-	PCheckFG    bool    = true
-	PFixCam     bool    = true
-	Step        float32 = 0.2
-	CanWriteMem bool    = true
-	TWOMPID     uint32
-	BaseAddr    int64
+	PCheckFG bool    = true
+	PFixCam  bool    = true
+	PReadMem bool    = true
+	Step     float32 = 0.3
+	TWOMPID  uint32
+	BaseAddr int64
 
 	XPos, YPos, CMode          uintptr
 	XBuffer, YBuffer, CMBuffer []uint8
 	X, Y                       float32
 	CM                         uint32
+
+	CwMem = make(chan bool)
+	Mutex sync.Mutex
 )
 
 func main() {
@@ -32,18 +36,20 @@ func main() {
 	// because flag.Float32Var doesn't exist.
 	var tmpFloat64 float64
 
-	flag.Float64Var(&tmpFloat64, "Step", 0.2, "Step determines how fast/much the camera should move when pressing W/A/S/D")
+	flag.Float64Var(&tmpFloat64, "Step", 0.3, "Step determines how fast/much the camera should move when pressing W/A/S/D")
 
-	flag.BoolVar(&PCheckFG, "CheckFG", true, "CheckFG will periodically (every 100ms) check if This War of Mine is the foreground application\r\nThis fixes an issue, where even if TWOM is not foreground, key inputs would register, and set X, Y positions from other applications.\r\nRecommended value is true")
+	flag.BoolVar(&PCheckFG, "CheckFG", true, "CheckFG will periodically (every 10ms) check if This War of Mine is the foreground application\r\nThis fixes an issue, where even if TWOM is not foreground, key inputs would register, and set X, Y positions from other applications.\r\nRecommended value is true")
 
-	flag.BoolVar(&PFixCam, "FixCam", true, "FixCam will periodically (every 100ms) check, and set a value to an address that controls the camera mode.\r\nThis fixes a notorious issue, that when you loaded into a level, or moved the camera by other means, would disable the ability to use W/A/S/D controls\r\nHighly recommended to keep this value on true.")
+	flag.BoolVar(&PReadMem, "ReadMem", true, "ReadMem will periodically (every 10ms) write the X, Y coordinates from the game's memory to a stored one\r\nThis fixes an issue where pressing tab or using the mouse to change camera position would rubberband the camera back.\r\nRecommended value is true")
+
+	flag.BoolVar(&PFixCam, "FixCam", true, "FixCam will periodically (every 10ms) check, and set a value to an address that controls the camera mode.\r\nThis fixes a notorious issue, that when you loaded into a level, or moved the camera by other means, would disable the ability to use W/A/S/D controls\r\nHighly recommended to keep this value on true.")
 
 	flag.Parse()
 
 	Step = float32(tmpFloat64)
 
 	if Step <= 0 {
-		Step = 0.2
+		Step = 0.3
 	}
 
 	fmt.Printf("Step: %v | PCheckFG: %v | FixCam: %v\r\n", Step, PCheckFG, PFixCam)
@@ -93,11 +99,28 @@ func main() {
 		go func() {
 			for {
 				if memory.GetWindowThreadProcessId(memory.GetForegroundWindow()) == TWOMPID {
-					CanWriteMem = true
+					CwMem <- true
 				} else {
-					CanWriteMem = false
+					CwMem <- false
 				}
-				time.Sleep(100 * time.Millisecond)
+				time.Sleep(10 * time.Millisecond)
+			}
+		}()
+	}
+
+	if PReadMem {
+		go func() {
+			for {
+				Mutex.Lock()
+
+				XBuffer = memory.ReadProcessMemory(HANDLE, XPos, 8)
+				X = math.Float32frombits(binary.LittleEndian.Uint32(XBuffer))
+
+				YBuffer = memory.ReadProcessMemory(HANDLE, YPos, 8)
+				Y = math.Float32frombits(binary.LittleEndian.Uint32(YBuffer))
+
+				Mutex.Unlock()
+				time.Sleep(10 * time.Millisecond)
 			}
 		}()
 	}
@@ -105,19 +128,22 @@ func main() {
 	if PFixCam {
 		go func() {
 			for {
+				Mutex.Lock()
 				CMBuffer = memory.ReadProcessMemory(HANDLE, CMode, 4)
 				CM = binary.LittleEndian.Uint32(CMBuffer)
 
 				if CM != 148602 {
 					memory.WriteProcessMemoryInt(HANDLE, CMode, 148602)
 				}
-				time.Sleep(100 * time.Millisecond)
+				Mutex.Unlock()
+				time.Sleep(10 * time.Millisecond)
 			}
 		}()
 	}
 
 	for {
-		if CanWriteMem {
+		Mutex.Lock()
+		if <-CwMem {
 			// W
 			if memory.GetAsyncKeyState(0x57) {
 				Y += Step
@@ -142,7 +168,7 @@ func main() {
 				memory.WriteProcessMemoryFloat(HANDLE, XPos, X)
 			}
 		}
-
-		time.Sleep(1 * time.Millisecond)
+		Mutex.Unlock()
+		time.Sleep(10 * time.Millisecond)
 	}
 }

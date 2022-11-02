@@ -34,7 +34,7 @@ var (
 )
 
 // https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory
-func ReadProcessMemory(hProcess, lpBaseAddress, nSize uintptr) (Buffer []uint8) {
+func ReadProcessMemory(hProcess, lpBaseAddress, nSize uintptr) (Buffer []uint8, c error) {
 	var nRead int
 	buffer := make([]uint8, nSize)
 	_, _, err := pReadProcessMemory.Call(
@@ -49,17 +49,12 @@ func ReadProcessMemory(hProcess, lpBaseAddress, nSize uintptr) (Buffer []uint8) 
 		// [out] SIZE_T  *lpNumberOfBytesRead
 		uintptr(unsafe.Pointer(&nRead)),
 	)
-
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Reading Memory -> ", err)
-	}
-
-	return buffer
+	return buffer, err
 
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess
-func OpenProcess(pid uint32) (HANDLE uintptr) {
+func OpenProcess(pid uint32) (HANDLE uintptr, c error) {
 	v, _, err := pOpenProcess.Call(
 		//[in] DWORD dwDesiredAccess
 		uintptr(PROCESS_ALL_ACCESS),
@@ -68,15 +63,11 @@ func OpenProcess(pid uint32) (HANDLE uintptr) {
 		//[in] DWORD dwProcessId
 		uintptr(pid),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Opening Process -> ", err)
-		return 0
-	}
-	return v
+	return v, err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-enumprocessmodules
-func EnumProcessModules(HANDLE uintptr) (Modules []uintptr) {
+func EnumProcessModules(HANDLE uintptr) (Modules []uintptr, c error) {
 
 	// This is only ran once, so it doesn't matter if we get a lot of repeat modules
 	// "It is a good idea to specify a large array of HMODULE values, because it is hard to predict how many modules there will be in the process at the time you call EnumProcessModules."
@@ -92,14 +83,11 @@ func EnumProcessModules(HANDLE uintptr) (Modules []uintptr) {
 		//[out] LPDWORD lpcbNeeded
 		uintptr(unsafe.Pointer(&lpcbNeeded)),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Enumerating Process Modules -> ", err)
-	}
-	return lphModule[:]
+	return lphModule[:], err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmodulefilenameexw
-func GetModuleFileNameExW(HANDLE, Module uintptr) string {
+func GetModuleFileNameExW(HANDLE, Module uintptr) (ModuleFileName string, c error) {
 	// https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation
 	// tldr; 260 is the max length of a windows path
 	var buffer [260]uint16
@@ -113,14 +101,11 @@ func GetModuleFileNameExW(HANDLE, Module uintptr) string {
 		//  [in]  DWORD   nSize
 		uintptr(uint32(len(buffer))),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Getting Module File Name -> ", err)
-	}
-	return syscall.UTF16ToString(buffer[:])
+	return syscall.UTF16ToString(buffer[:]), err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/psapi/nf-psapi-getmoduleinformation
-func GetModuleInformation(HANDLE, MODULE uintptr) MODULEINFO {
+func GetModuleInformation(HANDLE, MODULE uintptr) (MODULEINF MODULEINFO, c error) {
 	var MODINFO MODULEINFO
 
 	_, _, err := pGetModuleInformation.Call(
@@ -129,15 +114,12 @@ func GetModuleInformation(HANDLE, MODULE uintptr) MODULEINFO {
 		uintptr(unsafe.Pointer(&MODINFO)),
 		uintptr(unsafe.Sizeof(MODINFO)),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Getting Module Information -> ", err)
-	}
 
-	return MODINFO
+	return MODINFO, err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-writeprocessmemory
-func WriteProcessMemoryFloat(HANDLE, BaseAddr uintptr, ToWrite float32) {
+func WriteProcessMemoryFloat(HANDLE, BaseAddr uintptr, ToWrite float32) (c error) {
 	written := 0
 
 	_, _, err := pWriteProcessMemory.Call(
@@ -154,11 +136,9 @@ func WriteProcessMemoryFloat(HANDLE, BaseAddr uintptr, ToWrite float32) {
 		// [out] SIZE_T  *lpNumberOfBytesWritten
 		uintptr(unsafe.Pointer(&written)),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Writing Memory -> ", err)
-	}
+	return err
 }
-func WriteProcessMemoryInt(HANDLE, BaseAddr uintptr, ToWrite int) {
+func WriteProcessMemoryInt(HANDLE, BaseAddr uintptr, ToWrite int) (c error) {
 	written := 0
 
 	_, _, err := pWriteProcessMemory.Call(
@@ -175,20 +155,18 @@ func WriteProcessMemoryInt(HANDLE, BaseAddr uintptr, ToWrite int) {
 		// [out] SIZE_T  *lpNumberOfBytesWritten
 		uintptr(unsafe.Pointer(&written)),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Writing Memory -> ", err)
-	}
+	return err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate
 //
 // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-func GetAsyncKeyState(vKey int) bool {
+func GetAsyncKeyState(vKey int) (ok bool, c error) {
 	//[in] int vKey
 	if v, _, err := pGetAsyncKeyState.Call(uintptr(vKey)); v != 0 && err.(syscall.Errno) == 0 {
-		return true
+		return true, err
 	} else {
-		return false
+		return false, err
 	}
 }
 
@@ -204,12 +182,12 @@ func Offsets(HANDLE uintptr, BaseAddr uintptr, BaseOffset uintptr, Offsets ...ui
 	var Pointer uint64
 	for i := 0; i < len(Offsets); i++ {
 		if i == 0 {
-			Buffer = ReadProcessMemory(HANDLE, uintptr(BaseThing), 8)
+			Buffer, _ = ReadProcessMemory(HANDLE, uintptr(BaseThing), 8)
 			Pointer = binary.LittleEndian.Uint64(Buffer)
 			Pointer += uint64(Offsets[i])
 			fmt.Printf("%x\n", Pointer)
 		} else {
-			Buffer = ReadProcessMemory(HANDLE, uintptr(Pointer), 8)
+			Buffer, _ = ReadProcessMemory(HANDLE, uintptr(Pointer), 8)
 			Pointer = binary.LittleEndian.Uint64(Buffer)
 			Pointer += uint64(Offsets[i])
 			fmt.Printf("%x\n", Pointer)
@@ -219,71 +197,58 @@ func Offsets(HANDLE uintptr, BaseAddr uintptr, BaseOffset uintptr, Offsets ...ui
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-createtoolhelp32snapshot
-func CreateToolhelp32Snapshot() uintptr {
+func CreateToolhelp32Snapshot() (snapshot uintptr, c error) {
 	v, _, err := pCreateToolhelp32Snapshot.Call(
 		//[in] DWORD dwFlags,
 		uintptr(0x00000002),
 		//[in] DWORD th32ProcessID
 		uintptr(0),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Creating Snapshot -> ", err)
-	}
-	return v
+	return v, err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32firstw
-func Process32FirstW(HANDLE uintptr, PE32 syscall.ProcessEntry32) (bool, syscall.ProcessEntry32) {
+func Process32FirstW(HANDLE uintptr, PE32 syscall.ProcessEntry32) (ok bool, procentry syscall.ProcessEntry32, c error) {
 	v, _, err := pProcess32FirstW.Call(
 		// [in]      HANDLE           hSnapshot,
 		HANDLE,
 		// [in, out] LPPROCESSENTRY32 lppe
 		uintptr(unsafe.Pointer(&PE32)),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while running Process32First -> ", err)
-	}
 	if v == 1 {
-		return true, PE32
+		return true, PE32, err
 	}
-	return false, PE32
+	return false, PE32, err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/tlhelp32/nf-tlhelp32-process32nextw
-func Process32NextW(HANDLE uintptr, PE32 syscall.ProcessEntry32) (bool, syscall.ProcessEntry32) {
+func Process32NextW(HANDLE uintptr, PE32 syscall.ProcessEntry32) (ok bool, procentry syscall.ProcessEntry32, c error) {
 	v, _, err := pProcess32NextW.Call(
 		// [in]  HANDLE           hSnapshot,
 		HANDLE,
 		// [out] LPPROCESSENTRY32 lppe
 		uintptr(unsafe.Pointer(&PE32)),
 	)
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while running Process32Next -> ", err)
-	}
 	if v == 1 {
-		return true, PE32
+		return true, PE32, err
 	}
-	return false, PE32
+	return false, PE32, err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getforegroundwindow
-func GetForegroundWindow() uintptr {
+func GetForegroundWindow() (HWND uintptr, c error) {
 	v, _, err := pGetForegroundWindow.Call()
-	if err.(syscall.Errno) != 0 {
-		fmt.Println("Something went wrong while Getting Foreground Window -> ", err)
-		// Pretty sure there can't be an error here.
-	}
-	return v
+	return v, err
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getwindowthreadprocessid
-func GetWindowThreadProcessId(HWND uintptr) uint32 {
+func GetWindowThreadProcessId(HWND uintptr) (pid uint32, c error) {
 	var PID uint32
-	PGetWindowThreadProcessId.Call(
+	_, _, err := PGetWindowThreadProcessId.Call(
 		// [in]            HWND    hWnd,
 		HWND,
 		// [out, optional] LPDWORD lpdwProcessId
 		uintptr(unsafe.Pointer(&PID)),
 	)
-	return PID
+	return PID, err
 }

@@ -4,7 +4,7 @@ This War of Mine Better Camera
 
 # What is This?
 
-This app makes it possible to use WASD to control the camera in This War of Mine
+This app makes it possible to use the W/A/S/D keys to control the camera in This War of Mine
 
 <figure>
     <img src="demo.gif">
@@ -13,23 +13,27 @@ This app makes it possible to use WASD to control the camera in This War of Mine
 
 # How does this work?
 
-It's pretty simple, when the app detects that the 'a' key is held down, it writes memory to an address.
+It's pretty simple, when the app detects that the W/A/S/D key(s) are held down, it writes memory to specific addresses.
 
 # How can I use it?
 
-Download the app from the Releases page, if you want to adjust settings, open cmd and type
+Download the app from the [Releases page](https://github.com/cmd777/TWOMBC/releases/latest), if you want to adjust the settings, open cmd and type
 
 ```bash
-C:\Users\YourUserName\Downloads>twombc-arch.exe -Step float -CheckFG=bool -FixCam=bool
+C:\Users\YourUserName\Downloads>twombc-arch.exe -Step float -CheckFG=bool -ReadMem=bool -FixCam=bool -PrintErr=bool
 ```
 
-Step determines how fast/much the camera should move when pressing W/A/S/D, The default value is 0.2
+Step -> determines how fast/much the camera should move when pressing W/A/S/D, The default value is 0.7
 
-CheckFG will periodically (every 100ms) check if This War of Mine is the foreground application<br>This fixes an issue, where even if TWOM is not foreground, key inputs would register, and set X, Y positions from other applications.<br>Recommended & Default value is true
+CheckFG -> will periodically check if This War of Mine is the foreground application<br>This fixes an issue, where even if TWOM is not foreground, key inputs would register, and set X, Y positions from other applications.<br>Recommended value is true
 
-FixCam will periodically (every 100ms) check, and set a value to an address that controls the camera mode.<br>This fixes a notorious issue, that when you loaded into a level, or moved the camera by other means, would disable the ability to use W/A/S/D controls<br>Highly recommended to keep this value on true.
+ReadMem -> will periodically (every 10ms) write the X, Y coordinates from the game's memory to a stored one<br>This fixes an issue where pressing tab or using the mouse to change camera position would rubberband the camera back.<br>Recommended value is true
 
-Not setting anything, and just running the exe as is will set the default values (0.2, true, true)
+FixCam -> will periodically (every 10ms) check, and set a value to an address that controls the camera mode.<br>This fixes a notorious issue, that when you loaded into a level, or moved the camera by other means, would disable the ability to use W/A/S/D controls<br>Highly recommended to keep this value on true.
+
+PrintErr -> If set to true, PrintErr will print any error that comes up.<br>However, it can be quite spammy.
+
+Not setting anything, and just running the exe as is will set the default values (0.7, true, true, true, false)
 
 **Make sure This War of Mine is running before launching the program**
 

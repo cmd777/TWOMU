@@ -158,6 +158,30 @@ func WriteProcessMemoryInt(HANDLE, BaseAddr uintptr, ToWrite int) (c error) {
 	return err
 }
 
+func NOP(HANDLE, BaseAddr uintptr, HowMany int) (c error) {
+	written := 0
+
+	var NopArray []byte
+
+	for i := 0; i < HowMany; i++ {
+		NopArray = append(NopArray, 0x90)
+	}
+
+	_, _, err := pWriteProcessMemory.Call(
+		// [in]  HANDLE  hProcess,
+		HANDLE,
+		// [in]  LPVOID  lpBaseAddress,
+		BaseAddr,
+		// [in]  LPCVOID lpBuffer,
+		uintptr(unsafe.Pointer(&NopArray[0])),
+		// [in]  SIZE_T  nSize,
+		uintptr(HowMany),
+		// [out] SIZE_T  *lpNumberOfBytesWritten
+		uintptr(unsafe.Pointer(&written)),
+	)
+	return err
+}
+
 // https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate
 //
 // https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes

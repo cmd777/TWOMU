@@ -20,7 +20,7 @@ It's pretty simple, when the app detects that the W/A/S/D key(s) are held down, 
 Download the app from the [Releases page](https://github.com/cmd777/TWOMBC/releases/latest), if you want to adjust the settings, open cmd and type
 
 ```bash
-C:\Users\YourUserName\Downloads>twombc-arch.exe -Step float -CheckFG=bool -ReadMem=bool -FixCam=bool -PrintErr=bool
+C:\Users\YourUserName\Downloads>twombc-arch.exe -Step float -CheckFG=bool -ReadMem=bool -FixCam=bool -DisablePencil=bool -DisableRain=bool -PrintErr=bool
 ```
 
 Step -> determines how fast/much the camera should move when pressing W/A/S/D, The default value is 0.7
@@ -30,6 +30,10 @@ CheckFG -> will periodically check if This War of Mine is the foreground applica
 ReadMem -> will periodically (every 10ms) write the X, Y coordinates from the game's memory to a stored one<br>This fixes an issue where pressing tab or using the mouse to change camera position would rubberband the camera back.<br>Recommended value is true
 
 FixCam -> will periodically (every 10ms) check, and set a value to an address that controls the camera mode.<br>This fixes a notorious issue, that when you loaded into a level, or moved the camera by other means, would disable the ability to use W/A/S/D controls<br>Highly recommended to keep this value on true.
+
+DisablePencil -> If set to true, DisablePencil will disable the in-game pencil effect.<br>Note: this doesn't have an effect on frame rate.
+
+DisableRain -> If set to true, DisableRain will disable the in-game rain effect.<br>Note: this doesn't have an effect on frame rate.
 
 PrintErr -> If set to true, PrintErr will print any error that comes up.<br>However, it can be quite spammy.
 

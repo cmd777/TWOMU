@@ -14,18 +14,21 @@ import (
 )
 
 var (
-	PCheckFG bool
-	PReadMem bool
-	PFixCam  bool
-	PrintErr bool
-	Step     float32
+	PCheckFG          bool
+	PReadMem          bool
+	PFixCam           bool
+	DisablePEffect    bool
+	DisableRainEffect bool
+	PrintErr          bool
+	Step              float32
+
 	TWOMPID  uint32
 	BaseAddr int64
 
-	XPos, YPos, CMode          uintptr
-	XBuffer, YBuffer, CMBuffer []uint8
-	X, Y                       float32
-	CM                         uint32
+	XPos, YPos, CMode, Rain, Pencil uintptr
+	XBuffer, YBuffer, CMBuffer      []uint8
+	X, Y                            float32
+	CM                              uint32
 
 	CwMem = make(chan bool)
 	Mutex sync.Mutex
@@ -46,6 +49,10 @@ func main() {
 	flag.BoolVar(&PReadMem, "ReadMem", true, "ReadMem will periodically (every 10ms) write the X, Y coordinates from the game's memory to a stored one\r\nThis fixes an issue where pressing tab or using the mouse to change camera position would rubberband the camera back.\r\nRecommended value is true")
 
 	flag.BoolVar(&PFixCam, "FixCam", true, "FixCam will periodically (every 10ms) check, and set a value to an address that controls the camera mode.\r\nThis fixes a notorious issue, that when you loaded into a level, or moved the camera by other means, would disable the ability to use W/A/S/D controls\r\nHighly recommended to keep this value on true.")
+
+	flag.BoolVar(&DisablePEffect, "DisablePencil", false, "If set to true, DisablePencil will disable the in-game pencil effect.\r\nNote: this doesn't have an effect on frame rate.")
+
+	flag.BoolVar(&DisableRainEffect, "DisableRain", false, "If set to true, DisableRain will disable the in-game rain effect.\r\nNote: this doesn't have an effect on frame rate.")
 
 	flag.BoolVar(&PrintErr, "PrintErr", false, "If set to true, PrintErr will print any error that comes up.\r\nHowever, it can be quite spammy.")
 
@@ -129,6 +136,24 @@ func main() {
 	Y = math.Float32frombits(binary.LittleEndian.Uint32(YBuffer))
 
 	CMode = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x009064D0, 0xA6)
+
+	Pencil = uintptr(BaseAddr) + 0x24D782
+
+	Rain = uintptr(BaseAddr) + 0x1B431F
+
+	if DisablePEffect {
+		err := memory.NOP(HANDLE, Pencil, 9)
+		if err.(syscall.Errno) != 0 && PrintErr {
+			fmt.Println("[0] NOP ->", err)
+		}
+	}
+
+	if DisableRainEffect {
+		err := memory.NOP(HANDLE, Rain, 7)
+		if err.(syscall.Errno) != 0 && PrintErr {
+			fmt.Println("[1] NOP ->", err)
+		}
+	}
 
 	if PCheckFG {
 		go CheckFG()

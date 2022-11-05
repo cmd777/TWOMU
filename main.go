@@ -19,16 +19,17 @@ var (
 	PFixCam           bool
 	DisablePEffect    bool
 	DisableRainEffect bool
+	ModifyWndProc     bool
 	PrintErr          bool
 	Step              float32
 
 	TWOMPID  uint32
 	BaseAddr int64
 
-	XPos, YPos, CMode, Rain, Pencil uintptr
-	XBuffer, YBuffer, CMBuffer      []uint8
-	X, Y                            float32
-	CM                              uint32
+	XPos, YPos, CMode, Rain, Pencil, WndProc uintptr
+	XBuffer, YBuffer, CMBuffer               []uint8
+	X, Y                                     float32
+	CM                                       uint32
 
 	CwMem = make(chan bool)
 	Mutex sync.Mutex
@@ -53,6 +54,8 @@ func main() {
 	flag.BoolVar(&DisablePEffect, "DisablePencil", false, "If set to true, DisablePencil will disable the in-game pencil effect.\r\nNote: this doesn't have an effect on frame rate.")
 
 	flag.BoolVar(&DisableRainEffect, "DisableRain", false, "If set to true, DisableRain will disable the in-game rain effect.\r\nNote: this doesn't have an effect on frame rate.")
+
+	flag.BoolVar(&ModifyWndProc, "ModifyWndProc", false, "If set to true, ModifyWndProc will change (NOP) TWOM's WndProc WM_SIZE.\r\nWhenever TWOM is minimized, and then reopened, there is about a 2s black screen before the game can show anything (1s because of kernel32's 1000ms sleep, and another one rendering everything), ModifyWndProc will NOP the 'if' condition to WM_SIZE, and make the 2s process near instantaneous\r\nThis comes at a downside, as attempting to resize the game from anything lower than 100% resolution back to 100% makes everything low resolution (NOTE: It's possible to change resolution back to 100%, it needs to be done from the settings menu.)\r\n other than that, there are no other downsides found.")
 
 	flag.BoolVar(&PrintErr, "PrintErr", false, "If set to true, PrintErr will print any error that comes up.\r\nHowever, it can be quite spammy.")
 
@@ -141,6 +144,8 @@ func main() {
 
 	Rain = uintptr(BaseAddr) + 0x1B431F
 
+	WndProc = uintptr(BaseAddr) + 0x4C2C31
+
 	if DisablePEffect {
 		err := memory.NOP(HANDLE, Pencil, 9)
 		if err.(syscall.Errno) != 0 && PrintErr {
@@ -152,6 +157,13 @@ func main() {
 		err := memory.NOP(HANDLE, Rain, 7)
 		if err.(syscall.Errno) != 0 && PrintErr {
 			fmt.Println("[1] NOP ->", err)
+		}
+	}
+
+	if ModifyWndProc {
+		err := memory.NOP(HANDLE, WndProc, 5)
+		if err.(syscall.Errno) != 0 && PrintErr {
+			fmt.Println("[2] NOP ->", err)
 		}
 	}
 

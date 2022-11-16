@@ -17,7 +17,6 @@ var (
 	Step float32 = 0.7
 
 	UseWASD           bool = false
-	PCheckFG          bool = false
 	PReadMem          bool = false
 	PFixCam           bool = false
 	DisablePEffect    bool = false
@@ -26,7 +25,6 @@ var (
 	ModifyWndProc     bool = false
 
 	WASDChan    = make(chan struct{})
-	FGChan      = make(chan struct{})
 	ReadMemChan = make(chan struct{})
 	FixCamChan  = make(chan struct{})
 
@@ -38,7 +36,6 @@ var (
 	X, Y                                                      float32
 	CM                                                        uint32
 
-	CwMem = make(chan bool)
 	Mutex sync.Mutex
 
 	S = time.NewTimer(10 * time.Millisecond)
@@ -135,46 +132,40 @@ func PrintMenu() {
 		fmt.Println("\033[91m[off]\033[0m\t2) Use WASD Controls")
 	}
 
-	if PCheckFG {
-		fmt.Println("\033[92m[on]\033[0m\t3) Check if TWOM is foreground")
-	} else {
-		fmt.Println("\033[91m[off]\033[0m\t3) Check if TWOM is foreground")
-	}
-
 	if PReadMem {
-		fmt.Println("\033[92m[on]\033[0m\t4) Read & Write game memory to a stored one")
+		fmt.Println("\033[92m[on]\033[0m\t3) Read & Write game memory to a stored one")
 	} else {
-		fmt.Println("\033[91m[off]\033[0m\t4) Read & Write game memory to a stored one")
+		fmt.Println("\033[91m[off]\033[0m\t3) Read & Write game memory to a stored one")
 	}
 
 	if PFixCam {
-		fmt.Println("\033[92m[on]\033[0m\t5) Fix Camera for WASD Controls")
+		fmt.Println("\033[92m[on]\033[0m\t4) Fix Camera for WASD Controls")
 	} else {
-		fmt.Println("\033[91m[off]\033[0m\t5) Fix Camera for WASD Controls")
+		fmt.Println("\033[91m[off]\033[0m\t4) Fix Camera for WASD Controls")
 	}
 
 	if DisablePEffect {
-		fmt.Println("\033[92m[on]\033[0m\t6) Show Pencil Effect")
+		fmt.Println("\033[92m[on]\033[0m\t5) Hide Pencil Effect")
 	} else {
-		fmt.Println("\033[91m[off]\033[0m\t6) Show Pencil Effect")
+		fmt.Println("\033[91m[off]\033[0m\t5) Hide Pencil Effect")
 	}
 
 	if DisableRainEffect {
-		fmt.Println("\033[92m[on]\033[0m\t7) Show Rain")
+		fmt.Println("\033[92m[on]\033[0m\t6) Hide Rain")
 	} else {
-		fmt.Println("\033[91m[off]\033[0m\t7) Show Rain")
+		fmt.Println("\033[91m[off]\033[0m\t6) Hide Rain")
 	}
 
 	if DisableOutlines {
-		fmt.Println("\033[92m[on]\033[0m\t8) Show Outlines")
+		fmt.Println("\033[92m[on]\033[0m\t7) Hide Outlines")
 	} else {
-		fmt.Println("\033[91m[off]\033[0m\t8) Show Outlines")
+		fmt.Println("\033[91m[off]\033[0m\t7) Hide Outlines")
 	}
 
 	if ModifyWndProc {
-		fmt.Println("\033[92m[on]\033[0m\t9) Modify WndProc")
+		fmt.Println("\033[92m[on]\033[0m\t8) Modify WndProc")
 	} else {
-		fmt.Println("\033[91m[off]\033[0m\t9) Modify WndProc")
+		fmt.Println("\033[91m[off]\033[0m\t8) Modify WndProc")
 	}
 
 	fmt.Println("0) Change Step Value ( now", Step, ")")
@@ -212,11 +203,6 @@ func main() {
 			GetTWOM()
 			PrintMenu()
 		case "2":
-			if !PCheckFG {
-				go CheckFG()
-			}
-			PCheckFG = true
-
 			if !UseWASD {
 				go WASDControls()
 			} else {
@@ -226,15 +212,6 @@ func main() {
 			ClearScreen()
 			PrintMenu()
 		case "3":
-			if !PCheckFG {
-				go CheckFG()
-			} else {
-				FGChan <- struct{}{}
-			}
-			PCheckFG = !PCheckFG
-			ClearScreen()
-			PrintMenu()
-		case "4":
 			if !PReadMem {
 				go ReadMem()
 			} else {
@@ -243,7 +220,7 @@ func main() {
 			PReadMem = !PReadMem
 			ClearScreen()
 			PrintMenu()
-		case "5":
+		case "4":
 			if !PFixCam {
 				go FixCam()
 			} else {
@@ -252,7 +229,7 @@ func main() {
 			PFixCam = !PFixCam
 			ClearScreen()
 			PrintMenu()
-		case "6":
+		case "5":
 			if !DisablePEffect {
 				memory.NOP(HANDLE, Pencil, 9)
 			} else {
@@ -261,7 +238,7 @@ func main() {
 			DisablePEffect = !DisablePEffect
 			ClearScreen()
 			PrintMenu()
-		case "7":
+		case "6":
 			if !DisableRainEffect {
 				memory.NOP(HANDLE, Rain, 7)
 			} else {
@@ -270,7 +247,7 @@ func main() {
 			DisableRainEffect = !DisableRainEffect
 			ClearScreen()
 			PrintMenu()
-		case "8":
+		case "7":
 			if !DisableOutlines {
 				memory.NOP(HANDLE, Outline, 8)
 			} else {
@@ -279,7 +256,7 @@ func main() {
 			DisableOutlines = !DisableOutlines
 			ClearScreen()
 			PrintMenu()
-		case "9":
+		case "8":
 			if !ModifyWndProc {
 				memory.NOP(HANDLE, WndProc, 5)
 			} else {
@@ -291,9 +268,6 @@ func main() {
 		case "a":
 			if !UseWASD {
 				go WASDControls()
-			}
-			if !PCheckFG {
-				go CheckFG()
 			}
 			if !PReadMem {
 				go ReadMem()
@@ -315,7 +289,6 @@ func main() {
 			}
 
 			UseWASD = true
-			PCheckFG = true
 			PReadMem = true
 			PFixCam = true
 			DisablePEffect = true
@@ -346,7 +319,7 @@ func WASDControls() {
 		default:
 			<-S.C
 			Mutex.Lock()
-			if <-CwMem {
+			if pid := memory.GetWindowThreadProcessId(memory.GetForegroundWindow()); pid == TWOMPID {
 				// W
 				if memory.GetAsyncKeyState(0x57) {
 					Y += Step
@@ -374,22 +347,6 @@ func WASDControls() {
 			Mutex.Unlock()
 			if !S.Stop() {
 				S.Reset(10 * time.Millisecond)
-			}
-		}
-	}
-}
-
-func CheckFG() {
-	for {
-		select {
-		case <-FGChan:
-			return
-		default:
-			HWND := memory.GetForegroundWindow()
-			if pid := memory.GetWindowThreadProcessId(HWND); pid == TWOMPID {
-				CwMem <- true
-			} else {
-				CwMem <- false
 			}
 		}
 	}

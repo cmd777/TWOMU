@@ -49,6 +49,11 @@ If you are using any windows version after 1511 (build number 10586), then you c
 
 TBD: SetConsoleTextAttribute, that should work on most windows versions.
 
+# Known Issues
+Terminals that don't support ANSI escape sequences have &larr; & no color.<br>
+PReadMem breaks or bugs out Stories' intros & animations.<br>
+Attempting to set random values in the My Stories tab after leaving a previously saved game will break it.<br>
+
 # My antivirus says it's a virus, is it?
 
 <figure>

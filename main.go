@@ -5,12 +5,48 @@ import (
 	"fmt"
 	memory "main/memory"
 	"math"
+	"math/rand"
 	"os"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
+)
+
+const (
+	Abandoned_Cottage = iota
+	Shelled_Cottage
+	Ruined_Block_of_Flats
+	Looted_Gas_Station
+	Ghost_House
+	Garage
+	Small_Apartment_Building
+	Decrepit_Squad
+	Brothel
+	Shelled_School
+	Warehouse
+	Ruined_Villa
+	Semi_Detached_House
+	Military_Outpost
+	Hotel
+	Construction_Site
+	Quiet_House
+	Supermarket
+	Sniper_Junction
+	St_Marys_Church
+	City_Hospital
+	Old_Town
+	Port
+	Airport
+	Pharmacy
+	Ruined_Toy_Store
+	Park
+	Bakery
+	Shelled_Brewery
+	The_Samuel_Institute
+	Railway_Station
+	Music_Club
 )
 
 var (
@@ -39,9 +75,45 @@ var (
 	// For Custom Scenarios
 	LocationsPTR      uintptr
 	LocationsAddr     []uintptr
-	LocationsToChoose int = 8
+	LocationsToChoose int
+	LocationsAdded    = make(map[int]uintptr)
+	LocationsData     = map[int]int{
+		Abandoned_Cottage:        1,
+		Shelled_Cottage:          1,
+		Ruined_Block_of_Flats:    1,
+		Looted_Gas_Station:       1,
+		Ghost_House:              1,
+		Garage:                   1,
+		Small_Apartment_Building: 2,
+		Decrepit_Squad:           1,
+		Brothel:                  1,
+		Shelled_School:           2,
+		Warehouse:                1,
+		Ruined_Villa:             2,
+		Semi_Detached_House:      2,
+		Military_Outpost:         1,
+		Hotel:                    3,
+		Construction_Site:        2,
+		Quiet_House:              1,
+		Supermarket:              2,
+		Sniper_Junction:          2,
+		St_Marys_Church:          2,
+		City_Hospital:            1,
+		Old_Town:                 1,
+		Port:                     1,
+		Airport:                  1,
+		Pharmacy:                 1,
+		Ruined_Toy_Store:         1,
+		Park:                     1,
+		Bakery:                   1,
+		Shelled_Brewery:          1,
+		The_Samuel_Institute:     1,
+		Railway_Station:          1,
+		Music_Club:               2,
+	}
 
-	Ceasefire, Intensity, WinterComes, WinterHarshness, WinterLength uintptr
+	Ceasefirep, Intensityp, WinterComesp, WinterHarshnessp, WinterLengthp uintptr
+	Ceasefire, Intensity, WinterComes, WinterHarshness, WinterLength      int
 
 	Mutex sync.Mutex
 
@@ -279,6 +351,8 @@ func main() {
 			ModifyWndProc = !ModifyWndProc
 			ClearScreen()
 			PrintMenu()
+		case "A":
+			fallthrough
 		case "a":
 			if !UseWASD {
 				go WASDControls()
@@ -319,19 +393,58 @@ func main() {
 			}
 			ClearScreen()
 			PrintMenu()
+		case "I":
+			fallthrough
 		case "i":
-			Ceasefire = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x00, 0x34)
-			Intensity = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x08, 0x34)
-			WinterComes = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x10, 0x34)
-			WinterHarshness = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x18, 0x34)
-			WinterLength = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x20, 0x34)
+			Ceasefirep = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x00, 0x34)
+			Intensityp = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x08, 0x34)
+			WinterComesp = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x10, 0x34)
+			WinterHarshnessp = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x18, 0x34)
+			WinterLengthp = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x20, 0x34)
+
+			rand.Seed(time.Now().UnixNano())
+			Ceasefire = rand.Intn(13)
+			Intensity = rand.Intn(3)
+			WinterComes = 1 + rand.Intn(3)
+			WinterHarshness = rand.Intn(3)
+			WinterLength = rand.Intn(3)
+
+			LocationsToChoose = 8 + Ceasefire
+
+			memory.WriteProcessMemory(HANDLE, Ceasefirep, []byte{byte(Ceasefire)})
+			memory.WriteProcessMemory(HANDLE, Intensityp, []byte{byte(Intensity)})
+			memory.WriteProcessMemory(HANDLE, WinterComesp, []byte{byte(WinterComes)})
+			memory.WriteProcessMemory(HANDLE, WinterHarshnessp, []byte{byte(WinterHarshness)})
+			memory.WriteProcessMemory(HANDLE, WinterLengthp, []byte{byte(WinterLength)})
+		case "O":
+			fallthrough
 		case "o":
 			LocationsPTR = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x800, 0x220, 0x00, 0x00, 0x120, 0x10)
+
+			LocationsAddr = nil
+			for k := range LocationsAdded {
+				delete(LocationsAdded, k)
+			}
 
 			LocationsAddr = append(LocationsAddr, LocationsPTR)
 			for i := 0; i < 31; i++ {
 				LocationsAddr = append(LocationsAddr, LocationsAddr[len(LocationsAddr)-1]+56)
 			}
+
+			rand.Seed(time.Now().UnixNano())
+			for i := 0; i < LocationsToChoose; i++ {
+				id := rand.Intn(len(LocationsAddr))
+				if LocationsAdded[id] != 0 {
+					i--
+				} else {
+					LocationsAdded[id] = LocationsAddr[id]
+				}
+			}
+
+			for id, pointer := range LocationsAdded {
+				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00})
+			}
+
 		default:
 			fmt.Println(Option, "is not a valid option.")
 		}

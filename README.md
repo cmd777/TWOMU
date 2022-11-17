@@ -33,6 +33,10 @@ DisableOutlines -> will disable the flashing character outlines.<br>Note: this d
 
 ModifyWndProc -> will change (NOP) TWOM's WndProc WM_SIZE.<br>Whenever TWOM is minimized, and then reopened, there is about a 2s black screen before the game can show anything (1s because of kernel32's 1000ms sleep, and another one rendering everything), ModifyWndProc will NOP the 'if' condition to WM_SIZE, and make the 2s process near instantaneous<br>This comes at a downside, as attempting to resize the game from anything lower than 100% resolution back to 100% makes everything low resolution (NOTE: It's possible to change resolution back to 100%, it needs to be done from the settings menu.) other than that, there are no other downsides found.
 
+Randomize Settings, Randomize Locations -> will randomly set values in the `My Story` tab<br>
+Randomize Settings requires the `My Story` tab to be open <br>
+Randomize Locations requires the `My City Map` tab to be open.
+
 # Nothing is happening | Weird characters in the terminal
 If you haven't, when TWOM is started, make sure to run option 1 in TWOMU. This will find the game's PID and Handle.
 

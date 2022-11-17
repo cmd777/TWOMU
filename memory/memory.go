@@ -35,9 +35,9 @@ var (
 )
 
 // https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory
-func ReadProcessMemory(hProcess, lpBaseAddress, nSize uintptr) (Buffer []uint8) {
+func ReadProcessMemory(hProcess, lpBaseAddress, nSize uintptr) (Buffer []byte) {
 	var nRead int
-	buffer := make([]uint8, nSize)
+	buffer := make([]byte, nSize)
 	_, _, err := pReadProcessMemory.Call(
 		// [in]  HANDLE  hProcess
 		hProcess,
@@ -224,7 +224,7 @@ type MODULEINFO struct {
 
 func Offsets(HANDLE uintptr, BaseAddr uintptr, BaseOffset uintptr, Offsets ...uintptr) uintptr {
 	BaseThing := BaseAddr + BaseOffset
-	var Buffer []uint8
+	var Buffer []byte
 	var Pointer uint64
 	for i := 0; i < len(Offsets); i++ {
 		if i == 0 {

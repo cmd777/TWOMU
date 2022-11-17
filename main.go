@@ -32,9 +32,16 @@ var (
 	BaseAddr int64
 
 	HANDLE, XPos, YPos, CMode, Rain, Pencil, WndProc, Outline uintptr
-	XBuffer, YBuffer, CMBuffer                                []uint8
+	XBuffer, YBuffer, CMBuffer                                []byte
 	X, Y                                                      float32
 	CM                                                        uint32
+
+	// For Custom Scenarios
+	LocationsPTR      uintptr
+	LocationsAddr     []uintptr
+	LocationsToChoose int = 8
+
+	Ceasefire, Intensity, WinterComes, WinterHarshness, WinterLength uintptr
 
 	Mutex sync.Mutex
 
@@ -167,6 +174,13 @@ func PrintMenu() {
 	} else {
 		fmt.Println("\033[91m[off]\033[0m\t8) Modify WndProc")
 	}
+
+	fmt.Println()
+	fmt.Println("----------------------------------------")
+	fmt.Println()
+
+	fmt.Println("i) Randomize Settings\t(Custom Scenario)")
+	fmt.Println("o) Randomize Locations\t(Custom Scenario)")
 
 	fmt.Println("0) Change Step Value ( now", Step, ")")
 
@@ -305,6 +319,19 @@ func main() {
 			}
 			ClearScreen()
 			PrintMenu()
+		case "i":
+			Ceasefire = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x00, 0x34)
+			Intensity = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x08, 0x34)
+			WinterComes = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x10, 0x34)
+			WinterHarshness = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x18, 0x34)
+			WinterLength = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x20, 0x34)
+		case "o":
+			LocationsPTR = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x800, 0x220, 0x00, 0x00, 0x120, 0x10)
+
+			LocationsAddr = append(LocationsAddr, LocationsPTR)
+			for i := 0; i < 31; i++ {
+				LocationsAddr = append(LocationsAddr, LocationsAddr[len(LocationsAddr)-1]+56)
+			}
 		default:
 			fmt.Println(Option, "is not a valid option.")
 		}

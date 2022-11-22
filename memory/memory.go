@@ -1,6 +1,7 @@
 package pmemory
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"syscall"
@@ -55,6 +56,15 @@ func ReadProcessMemory(hProcess, lpBaseAddress, nSize uintptr) (Buffer []byte) {
 	}
 	return buffer
 
+}
+
+func ScanBytes(scan []byte, pattern []byte) int64 {
+	for i := 0; i < len(scan); i++ {
+		if res := bytes.Compare(scan[i:i+len(pattern)], pattern); res == 0 {
+			return int64(i)
+		}
+	}
+	return 0
 }
 
 // https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess

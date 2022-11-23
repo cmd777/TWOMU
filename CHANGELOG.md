@@ -1,1 +1,1 @@
-- Added patch option: allow multiple instances
+- Removed redundant forever loop in PrintPatches

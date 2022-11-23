@@ -215,64 +215,60 @@ func PrintPatches() {
 
 	var Option string
 
-floop:
-	for {
-		fmt.Scan(&Option)
+	fmt.Scan(&Option)
 
-		switch Option {
-		case "clear":
-			ClearScreen()
-			PrintPatches()
-			break floop
-		case "cls":
-			ClearScreen()
-			PrintPatches()
-			break floop
-		case "allow-more-instances":
-			var ExePath string
+	switch Option {
+	case "clear":
+		ClearScreen()
+		PrintPatches()
+	case "cls":
+		ClearScreen()
+		PrintPatches()
+	case "allow-more-instances":
+		var ExePath string
 
-			fmt.Print("Please specify where This War of Mine.exe is (or just drag the exe here) -> ")
+		fmt.Print("Please specify where This War of Mine.exe is (or just drag the exe here) -> ")
 
-			inreader := bufio.NewScanner(os.Stdin)
+		inreader := bufio.NewScanner(os.Stdin)
 
-			for {
-				inreader.Scan()
-				if ExePath = inreader.Text(); ExePath != "" {
-					break
-				}
+		for {
+			inreader.Scan()
+			if ExePath = inreader.Text(); ExePath != "" {
+				break
 			}
-
-			ExePath = strings.Replace(ExePath, "\"", "", -1)
-
-			twombytes, err := os.ReadFile(ExePath)
-			if err != nil {
-				fmt.Println("Failed to Read File -> ", err)
-			}
-			fmt.Println("File Read OK")
-
-			Addr := memory.ScanBytes(twombytes, []byte{0x48, 0x85, 0xC0, 0x74, 0x3A, 0x48, 0x8B, 0xC8, 0xFF, 0x15, 0x08, 0x33, 0x0B, 0x00})
-			if Addr == 0 {
-				fmt.Println("Failed to Find Bytes")
-			} else {
-				twombytes[Addr+3] = 0xEB
-			}
-
-			errw := os.WriteFile("twom-mi.exe", twombytes, 0666)
-			if errw != nil {
-				fmt.Println("Failed to Write File -> ", errw)
-			}
-
-			if err == nil && errw == nil {
-				fmt.Println("twom-mi.exe was written successfully. leaving patches menu.")
-			} else {
-				fmt.Println("Something failed while attempting to patch the exe, leaving patches menu.")
-			}
-			break floop
-		case "leave":
-			break floop
 		}
+
+		ExePath = strings.Replace(ExePath, "\"", "", -1)
+
+		twombytes, err := os.ReadFile(ExePath)
+		if err != nil {
+			fmt.Println("Failed to Read File -> ", err)
+		}
+		fmt.Println("File Read OK")
+
+		Addr := memory.ScanBytes(twombytes, []byte{0x48, 0x85, 0xC0, 0x74, 0x3A, 0x48, 0x8B, 0xC8, 0xFF, 0x15, 0x08, 0x33, 0x0B, 0x00})
+		if Addr == 0 {
+			fmt.Println("Failed to Find Bytes")
+		} else {
+			twombytes[Addr+3] = 0xEB
+		}
+
+		errw := os.WriteFile("twom-mi.exe", twombytes, 0666)
+		if errw != nil {
+			fmt.Println("Failed to Write File -> ", errw)
+		}
+
+		if err == nil && errw == nil {
+			fmt.Println("twom-mi.exe was written successfully. leaving patches menu.")
+		} else {
+			fmt.Println("Something failed while attempting to patch the exe, leaving patches menu.")
+		}
+	case "leave":
+		ClearScreen()
+		PrintMenu()
+	default:
+		fmt.Println(Option, "is not a valid option.")
 	}
-	PrintMenu()
 }
 
 func PrintMenu() {

@@ -22,7 +22,7 @@ jobs:
       - name: Append SHA256 to CHANGELOG
         run: echo "twomu-x64.exe SHA256":" $(sha256sum twomu-x64.exe | cut -d " " -f 1)" >> CHANGELOG.md
       - name: Add Message if Prerelease
-        run: echo -e "<p align='center'><img src='https://img.shields.io/badge/-This%20is%20an%20experimental%20build%20and%20may%20not%20be%20fully%20stable-orange?style=plastic'></p>\n$(cat CHANGELOG.md)" > CHANGELOG.md
+        run: echo -e "<p align='center'><img src='https://img.shields.io/badge/-This%20is%20an%20experimental%20build%20and%20may%20not%20be%20fully%20stable-orange?style=plastic'></p>\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
         if: contains(github.ref, 'pre')
       - name: Release
         uses: softprops/action-gh-release@v1

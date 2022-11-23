@@ -165,12 +165,22 @@ func GetTWOM() {
 
 	CMode = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x009064D0, 0xA6)
 
+	// f3 44 0f 10 05 35 10 4a 00
+	// MOVSS XMM8,[TWOM+6EE7C0]
 	Pencil = uintptr(BaseAddr) + 0x24D782
 
+	// 0f b7 05 b8 d7 72 00
+	// MOVZX EAX,word ptr [TWOM+8E1ADE]
 	Rain = uintptr(BaseAddr) + 0x1B431F
 
+	//	83 e8 02
+	//	SUB EAX, 0x2
+	//	74 26
+	//	JZ TWOM+4C2C5C
 	WndProc = uintptr(BaseAddr) + 0x4C2C31
 
+	//	f3 0f 10 0d d8 2f 60 00
+	//	MOVSS XMM1, dword ptr [TWOM+819490]
 	Outline = uintptr(BaseAddr) + 0x2164B0
 
 	fmt.Println("Checking if everything works. . . . . . .")
@@ -218,6 +228,7 @@ func PrintPatches() {
 	fmt.Scan(&Option)
 
 	switch Option {
+	//todo add regex (regexp.MatchString)
 	case "clear":
 		ClearScreen()
 		PrintPatches()
@@ -347,6 +358,7 @@ func main() {
 		fmt.Scan(&Option)
 
 		switch Option {
+		//todo add regex (regexp.MatchString)
 		case "exit":
 			os.Exit(0)
 		case "quit":

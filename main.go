@@ -209,6 +209,23 @@ func GetTWOM() {
 		fmt.Println("Failed to Read Process Memory (Is the game running? Is an antivirus blocking ReadProcessMemory?)")
 	}
 	fmt.Println("Finished.")
+
+	fmt.Println("Attempting to Inject TWOMUHelper")
+	path, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Failed to get Current Directory")
+	}
+
+	dllPath := path + "\\twomuhelper.dll"
+
+	Valloc := memory.VirtualAllocEx(HANDLE, 0, uintptr(len(dllPath)+1), 0x00002000|0x00001000, 4)
+
+	memory.WriteProcessMemory(HANDLE, Valloc, []byte(dllPath), uintptr(len(dllPath)+1))
+
+	modKernel, _ := syscall.LoadLibrary("kernel32.dll")
+	LoadLibrary, _ := syscall.GetProcAddress(modKernel, "LoadLibraryA")
+
+	memory.CreateRemoteThread(HANDLE, 0, 0, LoadLibrary, Valloc, 0)
 }
 
 func PrintPatches() {
@@ -403,7 +420,7 @@ func main() {
 			if !DisablePEffect {
 				memory.NOP(HANDLE, Pencil, 9)
 			} else {
-				memory.WriteProcessMemory(HANDLE, Pencil, []byte{0xF3, 0x44, 0x0F, 0x10, 0x05, 0x35, 0x10, 0x4A, 0x00})
+				memory.WriteProcessMemory(HANDLE, Pencil, []byte{0xF3, 0x44, 0x0F, 0x10, 0x05, 0x35, 0x10, 0x4A, 0x00}, 9)
 			}
 			DisablePEffect = !DisablePEffect
 			ClearScreen()
@@ -412,7 +429,7 @@ func main() {
 			if !DisableRainEffect {
 				memory.NOP(HANDLE, Rain, 7)
 			} else {
-				memory.WriteProcessMemory(HANDLE, Rain, []byte{0x0F, 0xB7, 0x05, 0xB8, 0xD7, 0x72, 0x00})
+				memory.WriteProcessMemory(HANDLE, Rain, []byte{0x0F, 0xB7, 0x05, 0xB8, 0xD7, 0x72, 0x00}, 7)
 			}
 			DisableRainEffect = !DisableRainEffect
 			ClearScreen()
@@ -421,7 +438,7 @@ func main() {
 			if !DisableOutlines {
 				memory.NOP(HANDLE, Outline, 8)
 			} else {
-				memory.WriteProcessMemory(HANDLE, Outline, []byte{0xF3, 0x0F, 0x10, 0x0D, 0xD8, 0x2F, 0x60, 0x00})
+				memory.WriteProcessMemory(HANDLE, Outline, []byte{0xF3, 0x0F, 0x10, 0x0D, 0xD8, 0x2F, 0x60, 0x00}, 8)
 			}
 			DisableOutlines = !DisableOutlines
 			ClearScreen()
@@ -430,7 +447,7 @@ func main() {
 			if !ModifyWndProc {
 				memory.NOP(HANDLE, WndProc, 5)
 			} else {
-				memory.WriteProcessMemory(HANDLE, WndProc, []byte{0x83, 0xE8, 0x02, 0x74, 0x26})
+				memory.WriteProcessMemory(HANDLE, WndProc, []byte{0x83, 0xE8, 0x02, 0x74, 0x26}, 5)
 			}
 			ModifyWndProc = !ModifyWndProc
 			ClearScreen()
@@ -495,11 +512,11 @@ func main() {
 
 			LocationsToChoose = 8 + Ceasefire
 
-			memory.WriteProcessMemory(HANDLE, Ceasefirep, []byte{byte(Ceasefire)})
-			memory.WriteProcessMemory(HANDLE, Intensityp, []byte{byte(Intensity)})
-			memory.WriteProcessMemory(HANDLE, WinterComesp, []byte{byte(WinterComes)})
-			memory.WriteProcessMemory(HANDLE, WinterHarshnessp, []byte{byte(WinterHarshness)})
-			memory.WriteProcessMemory(HANDLE, WinterLengthp, []byte{byte(WinterLength)})
+			memory.WriteProcessMemory(HANDLE, Ceasefirep, []byte{byte(Ceasefire)}, 1)
+			memory.WriteProcessMemory(HANDLE, Intensityp, []byte{byte(Intensity)}, 1)
+			memory.WriteProcessMemory(HANDLE, WinterComesp, []byte{byte(WinterComes)}, 1)
+			memory.WriteProcessMemory(HANDLE, WinterHarshnessp, []byte{byte(WinterHarshness)}, 1)
+			memory.WriteProcessMemory(HANDLE, WinterLengthp, []byte{byte(WinterLength)}, 1)
 		case "O":
 			fallthrough
 		case "o":
@@ -526,7 +543,7 @@ func main() {
 			}
 
 			for id, pointer := range LocationsAdded {
-				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00})
+				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00}, 4)
 			}
 
 		case "P":
@@ -616,7 +633,7 @@ func FixCam() {
 			CM = binary.LittleEndian.Uint32(CMBuffer)
 
 			if CM != 148602 {
-				memory.WriteProcessMemory(HANDLE, CMode, []byte{0x7A, 0x44, 0x02})
+				memory.WriteProcessMemory(HANDLE, CMode, []byte{0x7A, 0x44, 0x02}, 3)
 			}
 			Mutex.Unlock()
 			if !S.Stop() {

@@ -1,0 +1,1 @@
+- Removed redundant forever loop in PrintPatches

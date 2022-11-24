@@ -1,0 +1,33 @@
+name: Main
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Go environment
+        uses: actions/setup-go@v3.3.1
+        with:
+          go-version: 1.19
+          check-latest: true
+          architecture: x64
+      - name: Build for Windows amd64
+        run: GOOS=windows go build -o twomu-x64.exe
+      - name: Append SHA256 to CHANGELOG
+        run: echo "twomu-x64.exe SHA256":" $(sha256sum twomu-x64.exe | cut -d " " -f 1)" >> CHANGELOG.md
+      - name: Add Message if Prerelease
+        run: echo -e "<p align='center'><img src='https://img.shields.io/badge/-This%20is%20an%20experimental%20build%20and%20may%20not%20be%20fully%20stable-orange?style=plastic'></p>\n\n$(cat CHANGELOG.md)" > CHANGELOG.md
+        if: contains(github.ref, 'pre')
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: CHANGELOG.md
+          files: |
+            twomu-x64.exe

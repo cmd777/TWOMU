@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"fmt"
 	memory "main/memory"
@@ -164,12 +165,22 @@ func GetTWOM() {
 
 	CMode = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x009064D0, 0xA6)
 
+	// f3 44 0f 10 05 35 10 4a 00
+	// MOVSS XMM8,[TWOM+6EE7C0]
 	Pencil = uintptr(BaseAddr) + 0x24D782
 
+	// 0f b7 05 b8 d7 72 00
+	// MOVZX EAX,word ptr [TWOM+8E1ADE]
 	Rain = uintptr(BaseAddr) + 0x1B431F
 
+	//	83 e8 02
+	//	SUB EAX, 0x2
+	//	74 26
+	//	JZ TWOM+4C2C5C
 	WndProc = uintptr(BaseAddr) + 0x4C2C31
 
+	//	f3 0f 10 0d d8 2f 60 00
+	//	MOVSS XMM1, dword ptr [TWOM+819490]
 	Outline = uintptr(BaseAddr) + 0x2164B0
 
 	fmt.Println("Checking if everything works. . . . . . .")
@@ -198,6 +209,77 @@ func GetTWOM() {
 		fmt.Println("Failed to Read Process Memory (Is the game running? Is an antivirus blocking ReadProcessMemory?)")
 	}
 	fmt.Println("Finished.")
+}
+
+func PrintPatches() {
+	fmt.Println()
+	fmt.Println("This War of Mine Utils -> Patches")
+	fmt.Println("The following options will patch the game executable itself.")
+	fmt.Println("Whilst it shouldn't happen, make sure you have a backup of your savefiles in case of a corruption caused by the patched exe.")
+	fmt.Println()
+
+	// pretty pointless for now.. maybe i'll do something with it later
+	fmt.Println("allow-more-instances) Will patch the game to allow more than 1 running instance")
+	fmt.Println("cls|clear) Clear Screen")
+	fmt.Println("leave) Go Back to The Normal Menu")
+
+	var Option string
+
+	fmt.Scan(&Option)
+
+	switch Option {
+	//todo add regex (regexp.MatchString)
+	case "clear":
+		ClearScreen()
+		PrintPatches()
+	case "cls":
+		ClearScreen()
+		PrintPatches()
+	case "allow-more-instances":
+		var ExePath string
+
+		fmt.Print("Please specify where This War of Mine.exe is (or just drag the exe here) -> ")
+
+		inreader := bufio.NewScanner(os.Stdin)
+
+		for {
+			inreader.Scan()
+			if ExePath = inreader.Text(); ExePath != "" {
+				break
+			}
+		}
+
+		ExePath = strings.Replace(ExePath, "\"", "", -1)
+
+		twombytes, err := os.ReadFile(ExePath)
+		if err != nil {
+			fmt.Println("Failed to Read File -> ", err)
+		}
+		fmt.Println("File Read OK")
+
+		Addr := memory.ScanBytes(twombytes, []byte{0x48, 0x85, 0xC0, 0x74, 0x3A, 0x48, 0x8B, 0xC8, 0xFF, 0x15, 0x08, 0x33, 0x0B, 0x00})
+		if Addr == 0 {
+			fmt.Println("Failed to Find Bytes")
+		} else {
+			twombytes[Addr+3] = 0xEB
+		}
+
+		errw := os.WriteFile("twom-mi.exe", twombytes, 0666)
+		if errw != nil {
+			fmt.Println("Failed to Write File -> ", errw)
+		}
+
+		if err == nil && errw == nil {
+			fmt.Println("twom-mi.exe was written successfully. leaving patches menu.")
+		} else {
+			fmt.Println("Something failed while attempting to patch the exe, leaving patches menu.")
+		}
+	case "leave":
+		ClearScreen()
+		PrintMenu()
+	default:
+		fmt.Println(Option, "is not a valid option.")
+	}
 }
 
 func PrintMenu() {
@@ -257,6 +339,7 @@ func PrintMenu() {
 	fmt.Println("0) Change Step Value ( now", Step, ")")
 
 	fmt.Println("a) Toggle All")
+	fmt.Println("p) Patches")
 	fmt.Println("cls|clear) Clear Screen")
 	fmt.Println("exit|quit Exit TWOMU")
 }
@@ -275,6 +358,7 @@ func main() {
 		fmt.Scan(&Option)
 
 		switch Option {
+		//todo add regex (regexp.MatchString)
 		case "exit":
 			os.Exit(0)
 		case "quit":
@@ -445,6 +529,11 @@ func main() {
 				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00})
 			}
 
+		case "P":
+			fallthrough
+		case "p":
+			ClearScreen()
+			PrintPatches()
 		default:
 			fmt.Println(Option, "is not a valid option.")
 		}

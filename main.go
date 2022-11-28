@@ -216,7 +216,7 @@ func GetTWOM() {
 		fmt.Println("Failed to get Current Directory")
 	}
 
-	dllPath := path + "\\TWOMUHook.dll"
+	dllPath := path + "\\TWOMUHook\\x64\\TWOMUHook.dll"
 
 	Valloc := memory.VirtualAllocEx(HANDLE, 0, uintptr(len(dllPath)+1), 0x00002000|0x00001000, 4)
 

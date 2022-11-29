@@ -33,14 +33,9 @@ jobs:
       - name: Zip Files
         run: 7z.exe a -mm=Deflate -mfb=258 -mpass=15 twomu.zip TWOMU-x64.exe TWOMUHook\x64\TWOMUHook.dll
         
-      - name: Write to CHANGELOG
-        run: go run hash.go ${{github.ref}} ../TWOMU.zip
-        working-directory: ./hasher
-        
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          body_path: CHANGELOG.md
           files: |
             TWOMU.zip

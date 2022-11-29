@@ -340,6 +340,7 @@ func PrintMenu() {
 
 	fmt.Println("a) Toggle All")
 	fmt.Println("p) Patches")
+	fmt.Println("q) Inject TWOMUHook")
 	fmt.Println("cls|clear) Clear Screen")
 	fmt.Println("exit|quit Exit TWOMU")
 }

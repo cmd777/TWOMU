@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -116,6 +117,9 @@ var (
 	Ceasefirep, Intensityp, WinterComesp, WinterHarshnessp, WinterLengthp uintptr
 	Ceasefire, Intensity, WinterComes, WinterHarshness, WinterLength      int
 
+	ExitRegex  = regexp.MustCompile(`(?mi)(exit|quit)`)
+	ClearRegex = regexp.MustCompile(`(?mi)(clear|cls)`)
+
 	Mutex sync.Mutex
 
 	S = time.NewTimer(10 * time.Millisecond)
@@ -209,23 +213,6 @@ func GetTWOM() {
 		fmt.Println("Failed to Read Process Memory (Is the game running? Is an antivirus blocking ReadProcessMemory?)")
 	}
 	fmt.Println("Finished.")
-
-	fmt.Println("Attempting to Inject TWOMUHelper")
-	path, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Failed to get Current Directory")
-	}
-
-	dllPath := path + "\\TWOMUHook\\x64\\TWOMUHook.dll"
-
-	Valloc := memory.VirtualAllocEx(HANDLE, 0, uintptr(len(dllPath)+1), 0x00002000|0x00001000, 4)
-
-	memory.WriteProcessMemory(HANDLE, Valloc, []byte(dllPath), uintptr(len(dllPath)+1))
-
-	modKernel, _ := syscall.LoadLibrary("kernel32.dll")
-	LoadLibrary, _ := syscall.GetProcAddress(modKernel, "LoadLibraryA")
-
-	memory.CreateRemoteThread(HANDLE, 0, 0, LoadLibrary, Valloc, 0)
 }
 
 func PrintPatches() {
@@ -245,11 +232,7 @@ func PrintPatches() {
 	fmt.Scan(&Option)
 
 	switch Option {
-	//todo add regex (regexp.MatchString)
-	case "clear":
-		ClearScreen()
-		PrintPatches()
-	case "cls":
+	case ClearRegex.FindString(Option):
 		ClearScreen()
 		PrintPatches()
 	case "allow-more-instances":
@@ -374,16 +357,12 @@ func main() {
 	for {
 		fmt.Scan(&Option)
 
+		Option = strings.ToLower(Option)
+
 		switch Option {
-		//todo add regex (regexp.MatchString)
-		case "exit":
+		case ExitRegex.FindString(Option):
 			os.Exit(0)
-		case "quit":
-			os.Exit(0)
-		case "clear":
-			ClearScreen()
-			PrintMenu()
-		case "cls":
+		case ClearRegex.FindString(Option):
 			ClearScreen()
 			PrintMenu()
 		case "1":
@@ -452,8 +431,6 @@ func main() {
 			ModifyWndProc = !ModifyWndProc
 			ClearScreen()
 			PrintMenu()
-		case "A":
-			fallthrough
 		case "a":
 			if !UseWASD {
 				go WASDControls()
@@ -494,8 +471,6 @@ func main() {
 			}
 			ClearScreen()
 			PrintMenu()
-		case "I":
-			fallthrough
 		case "i":
 			Ceasefirep = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x00, 0x34)
 			Intensityp = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x08, 0x34)
@@ -517,8 +492,7 @@ func main() {
 			memory.WriteProcessMemory(HANDLE, WinterComesp, []byte{byte(WinterComes)}, 1)
 			memory.WriteProcessMemory(HANDLE, WinterHarshnessp, []byte{byte(WinterHarshness)}, 1)
 			memory.WriteProcessMemory(HANDLE, WinterLengthp, []byte{byte(WinterLength)}, 1)
-		case "O":
-			fallthrough
+			PrintMenu()
 		case "o":
 			LocationsPTR = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x800, 0x220, 0x00, 0x00, 0x120, 0x10)
 
@@ -545,12 +519,35 @@ func main() {
 			for id, pointer := range LocationsAdded {
 				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00}, 4)
 			}
-
-		case "P":
-			fallthrough
+			PrintMenu()
 		case "p":
 			ClearScreen()
 			PrintPatches()
+		case "q":
+			fmt.Println("Attempting to Inject TWOMUHook")
+			path, err := os.Getwd()
+			if err != nil {
+				fmt.Println("Failed to get Current Directory")
+			}
+
+			dllPath := path + "\\TWOMUHook\\x64\\TWOMUHook.dll"
+
+			Valloc := memory.VirtualAllocEx(HANDLE, 0, uintptr(len(dllPath)+1), 0x00002000|0x00001000, 4)
+
+			memory.WriteProcessMemory(HANDLE, Valloc, []byte(dllPath), uintptr(len(dllPath)+1))
+
+			modKernel, err := syscall.LoadLibrary("kernel32.dll")
+			if err != nil {
+				memory.OutputDebugStringW(err.Error())
+			}
+
+			LoadLibrary, err := syscall.GetProcAddress(modKernel, "LoadLibraryA")
+			if err != nil {
+				memory.OutputDebugStringW(err.Error())
+			}
+
+			memory.CreateRemoteThread(HANDLE, 0, 0, LoadLibrary, Valloc, 0)
+			PrintMenu()
 		default:
 			fmt.Println(Option, "is not a valid option.")
 		}

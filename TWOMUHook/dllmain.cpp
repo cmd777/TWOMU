@@ -38,19 +38,12 @@ bool ModifyWndProc = false;
 
 DWORD PID;
 HANDLE TWOMHandle;
-LPVOID BaseAddr;
+INT64 BaseAddr;
 
 byte V_Pencil[] = { 0xF3, 0x44, 0x0F, 0x10, 0x05, 0x35, 0x10, 0x4A, 0x00 };
-byte PencilNOP[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
-
 byte V_Rain[] = { 0x0F, 0xB7, 0x05, 0xB8, 0xD7, 0x72, 0x00 };
-byte RainNOP[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
-
 byte V_Outlines[] = { 0xF3, 0x0F, 0x10, 0x0D, 0xD8, 0x2F, 0x60, 0x00 };
-byte OutlinesNOP[] = { 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90 };
-
 byte V_MWndProc[] = { 0x83, 0xE8, 0x02, 0x74, 0x26 };
-byte MWndProcNOP[] = { 0x90, 0x90, 0x90, 0x90, 0x90 };
 
 INT64 Pencil;
 INT64 Rain;
@@ -70,7 +63,21 @@ LRESULT __stdcall WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return CallWindowProc(V_WNDPROC, hWnd, msg, wParam, lParam);
 }
 
-LPVOID GetTWOM(HANDLE H)
+void NOP(HANDLE hProcess, LPVOID lpAddress, SIZE_T nSize)
+{
+    byte* nopArray = new byte[nSize];
+
+    for (size_t i = 0; i < nSize; i++)
+    {
+        nopArray[i] = 0x90;
+    }
+
+    WriteProcessMemory(hProcess, lpAddress, nopArray, nSize, 0);
+
+    delete[] nopArray;
+}
+
+INT64 GetTWOM(HANDLE H)
 {
     HMODULE Modules[256];
 
@@ -92,7 +99,7 @@ LPVOID GetTWOM(HANDLE H)
 
                     GetModuleInformation(H, Modules[i], &MInfo, sizeof(MInfo));
 
-                    return MInfo.lpBaseOfDll;
+                    return (INT64)MInfo.lpBaseOfDll;
                 }
             }
         }
@@ -126,10 +133,10 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
             BaseAddr = GetTWOM(TWOMHandle);
 
-            Pencil = (INT64)BaseAddr + 0x24D782;
-            Rain = (INT64)BaseAddr + 0x1B431F;
-            Outlines = (INT64)BaseAddr + 0x2164B0;
-            MWndProc = (INT64)BaseAddr + 0x4C2C31;
+            Pencil = BaseAddr + 0x24D782;
+            Rain = BaseAddr + 0x1B431F;
+            Outlines = BaseAddr + 0x2164B0;
+            MWndProc = BaseAddr + 0x4C2C31;
 
             ImGui_ImplWin32_Init(V_HWND);
             ImGui_ImplDX9_Init(d3ddev9);
@@ -149,7 +156,7 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
         ImGui::Checkbox("Disable Pencil Effect", &DisablePEffect);
         if (DisablePEffect) {
-            WriteProcessMemory(TWOMHandle, (PVOID)Pencil, PencilNOP, sizeof(PencilNOP), 0);
+            NOP(TWOMHandle, (PVOID)Pencil, sizeof(V_Pencil));
         }
         else {
             WriteProcessMemory(TWOMHandle, (PVOID)Pencil, V_Pencil, sizeof(V_Pencil), 0);
@@ -157,7 +164,7 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
         ImGui::Checkbox("Disable Rain Effect", &DisableRainEffect);
         if (DisableRainEffect) {
-            WriteProcessMemory(TWOMHandle, (PVOID)Rain, RainNOP, sizeof(RainNOP), 0);
+            NOP(TWOMHandle, (PVOID)Rain, sizeof(V_Rain));
         }
         else {
             WriteProcessMemory(TWOMHandle, (PVOID)Rain, V_Rain, sizeof(V_Rain), 0);
@@ -165,7 +172,7 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
         ImGui::Checkbox("Disable Character Outlines", &DisableOutlines);
         if (DisableOutlines) {
-            WriteProcessMemory(TWOMHandle, (PVOID)Outlines, OutlinesNOP, sizeof(OutlinesNOP), 0);
+            NOP(TWOMHandle, (PVOID)Outlines, sizeof(V_Outlines));
         }
         else {
             WriteProcessMemory(TWOMHandle, (PVOID)Outlines, V_Outlines, sizeof(V_Outlines), 0);
@@ -173,7 +180,7 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
         ImGui::Checkbox("Modify WndProc", &ModifyWndProc);
         if (ModifyWndProc) {
-            WriteProcessMemory(TWOMHandle, (PVOID)MWndProc, MWndProcNOP, sizeof(MWndProcNOP), 0);
+            NOP(TWOMHandle, (PVOID)MWndProc, sizeof(V_MWndProc));
         }
         else {
             WriteProcessMemory(TWOMHandle, (PVOID)MWndProc, V_MWndProc, sizeof(V_MWndProc), 0);

@@ -30,7 +30,9 @@ Reset V_Reset;
 
 bool SHOW = true;
 bool INIT = false;
+bool WINIT = false;
 
+bool UseWASD = false;
 bool DisablePEffect = false;
 bool DisableRainEffect = false;
 bool DisableOutlines = false;
@@ -49,6 +51,15 @@ INT64 Pencil;
 INT64 Rain;
 INT64 Outlines;
 INT64 MWndProc;
+
+INT64 XArray[] = { 0x70 };
+INT64 YArray[] = { 0x78 };
+INT64 XPos;
+INT64 YPos;
+
+float Step = 0.2;
+float X = 0;
+float Y = 0;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -75,6 +86,39 @@ void NOP(HANDLE hProcess, LPVOID lpAddress, SIZE_T nSize)
     WriteProcessMemory(hProcess, lpAddress, nopArray, nSize, 0);
 
     delete[] nopArray;
+}
+
+void WASDControls()
+{
+    for (;;)
+    {
+        DWORD fgWPID = 0;
+        GetWindowThreadProcessId(GetForegroundWindow(), &fgWPID);
+        if (fgWPID == PID && UseWASD)
+        {
+            if (GetAsyncKeyState(0x57))
+            {
+                Y += Step;
+                WriteProcessMemory(TWOMHandle, (LPVOID)YPos, &Y, sizeof(Y), 0);
+            }
+            if (GetAsyncKeyState(0x41))
+            {
+                X -= Step;
+                WriteProcessMemory(TWOMHandle, (LPVOID)XPos, &X, sizeof(X), 0);
+            }
+            if (GetAsyncKeyState(0x53))
+            {
+                Y -= Step;
+                WriteProcessMemory(TWOMHandle, (LPVOID)YPos, &Y, sizeof(Y), 0);
+            }
+            if (GetAsyncKeyState(0x44))
+            {
+                X += Step;
+                WriteProcessMemory(TWOMHandle, (LPVOID)XPos, &X, sizeof(X), 0);
+            }
+            Sleep(10);
+        }
+    }
 }
 
 INT64 GetTWOM(HANDLE H)
@@ -105,6 +149,26 @@ INT64 GetTWOM(HANDLE H)
         }
     }
     return NULL;
+}
+
+INT64 Offsets(HANDLE hProcess, INT64 BaseAddr, INT64 Off[], SIZE_T OffSize)
+{
+    INT64 Buffer;
+    SIZE_T Read;
+
+    ReadProcessMemory(hProcess, (LPVOID)BaseAddr, &Buffer, 8, &Read);
+    printf("BASE %I64x\n", Buffer);
+
+    for (size_t i = 0; i < OffSize - 1; i++)
+    {
+        ReadProcessMemory(hProcess, (LPVOID)(Buffer + Off[i]), &Buffer, 8, &Read);
+        printf("%zu-> %I64x\n", i, Buffer);
+    }
+
+    Buffer += Off[OffSize - 1];
+    printf("%zu-> %I64x", OffSize - 1, Buffer);
+
+    return Buffer;
 }
 
 HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
@@ -154,6 +218,17 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
     {
         ImGui::Begin("This War of Mine Utils", &SHOW);
 
+        ImGui::GetStyle().WindowTitleAlign = ImVec2(0.5f, 0.5f);
+
+        ImGui::Checkbox("Use WASD", &UseWASD);
+        if (UseWASD && !WINIT)
+        {
+            XPos = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), XArray, sizeof(XArray) / sizeof(XArray[0]));
+            YPos = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), YArray, sizeof(YArray) / sizeof(YArray[0]));
+            CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)WASDControls, NULL, NULL, NULL);
+            WINIT = true;
+        }
+
         ImGui::Checkbox("Disable Pencil Effect", &DisablePEffect);
         if (DisablePEffect) {
             NOP(TWOMHandle, (PVOID)Pencil, sizeof(V_Pencil));
@@ -185,6 +260,10 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
         else {
             WriteProcessMemory(TWOMHandle, (PVOID)MWndProc, V_MWndProc, sizeof(V_MWndProc), 0);
         }
+
+        ImGui::Separator();
+
+        ImGui::CheckboxFlags("[ImGui] Enable Keyboard Controls/Navigation", &ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
 
         ImGui::End();
     }

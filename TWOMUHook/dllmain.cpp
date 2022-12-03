@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <Psapi.h>
 #include <string>
+#include <mutex>
 
 #include "dep/dxsdk/d3d9.h"
 #include "dep/dxsdk/d3dx9.h"
@@ -30,9 +31,14 @@ Reset V_Reset;
 
 bool SHOW = true;
 bool INIT = false;
+
 bool WINIT = false;
+bool MINIT = false;
+bool CINIT = false;
 
 bool UseWASD = false;
+bool ReadMemory = false;
+bool FixCamera = false;
 bool DisablePEffect = false;
 bool DisableRainEffect = false;
 bool DisableOutlines = false;
@@ -54,12 +60,18 @@ INT64 MWndProc;
 
 INT64 XArray[] = { 0x70 };
 INT64 YArray[] = { 0x78 };
+INT64 CArray[] = { 0xA6 };
 INT64 XPos;
 INT64 YPos;
+INT64 CMode;
 
-float Step = 0.2;
-float X = 0;
-float Y = 0;
+float Step = 0.2f;
+float X = 0.0f;
+float Y = 0.0f;
+
+int CM;
+
+std::mutex Mutex;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -96,6 +108,7 @@ void WASDControls()
         GetWindowThreadProcessId(GetForegroundWindow(), &fgWPID);
         if (fgWPID == PID && UseWASD)
         {
+            Mutex.lock();
             if (GetAsyncKeyState(0x57))
             {
                 Y += Step;
@@ -115,6 +128,40 @@ void WASDControls()
             {
                 X += Step;
                 WriteProcessMemory(TWOMHandle, (LPVOID)XPos, &X, sizeof(X), 0);
+            }
+            Mutex.unlock();
+            Sleep(10);
+        }
+    }
+}
+
+void ReadMem()
+{
+    for (;;)
+    {
+        if (ReadMemory)
+        {
+            Mutex.lock();
+            ReadProcessMemory(TWOMHandle, (LPVOID)XPos, &X, sizeof(X), 0);
+            ReadProcessMemory(TWOMHandle, (LPVOID)YPos, &Y, sizeof(Y), 0);
+            Mutex.unlock();
+            Sleep(10);
+        }
+    }
+}
+
+void FixCam()
+{
+    for (;;)
+    {
+        if (FixCamera)
+        {
+            ReadProcessMemory(TWOMHandle, (LPVOID)CMode, &CM, sizeof(CM), 0);
+
+            if (CM != 148602)
+            {
+                CM = 148602;
+                WriteProcessMemory(TWOMHandle, (LPVOID)CMode, &CM, sizeof(CM), 0);
             }
             Sleep(10);
         }
@@ -154,14 +201,13 @@ INT64 GetTWOM(HANDLE H)
 INT64 Offsets(HANDLE hProcess, INT64 BaseAddr, INT64 Off[], SIZE_T OffSize)
 {
     INT64 Buffer;
-    SIZE_T Read;
 
-    ReadProcessMemory(hProcess, (LPVOID)BaseAddr, &Buffer, 8, &Read);
+    ReadProcessMemory(hProcess, (LPVOID)BaseAddr, &Buffer, 8, 0);
     printf("BASE %I64x\n", Buffer);
 
     for (size_t i = 0; i < OffSize - 1; i++)
     {
-        ReadProcessMemory(hProcess, (LPVOID)(Buffer + Off[i]), &Buffer, 8, &Read);
+        ReadProcessMemory(hProcess, (LPVOID)(Buffer + Off[i]), &Buffer, 8, 0);
         printf("%zu-> %I64x\n", i, Buffer);
     }
 
@@ -202,6 +248,10 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
             Outlines = BaseAddr + 0x2164B0;
             MWndProc = BaseAddr + 0x4C2C31;
 
+            XPos = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), XArray, sizeof(XArray) / sizeof(XArray[0]));
+            YPos = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), YArray, sizeof(YArray) / sizeof(YArray[0]));
+            CMode = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), CArray, sizeof(CArray) / sizeof(CArray[0]));
+
             ImGui_ImplWin32_Init(V_HWND);
             ImGui_ImplDX9_Init(d3ddev9);
             INIT = true;
@@ -223,10 +273,22 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
         ImGui::Checkbox("Use WASD", &UseWASD);
         if (UseWASD && !WINIT)
         {
-            XPos = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), XArray, sizeof(XArray) / sizeof(XArray[0]));
-            YPos = Offsets(TWOMHandle, (BaseAddr + 0x009064D0), YArray, sizeof(YArray) / sizeof(YArray[0]));
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)WASDControls, NULL, NULL, NULL);
             WINIT = true;
+        }
+
+        ImGui::Checkbox("Store Game Memory", &ReadMemory);
+        if (ReadMemory && !MINIT)
+        {
+            CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ReadMem, NULL, NULL, NULL);
+            MINIT = true;
+        }
+
+        ImGui::Checkbox("Fix Camera", &FixCamera);
+        if (FixCamera && !CINIT)
+        {
+            CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)FixCam, NULL, NULL, NULL);
+            CINIT = true;
         }
 
         ImGui::Checkbox("Disable Pencil Effect", &DisablePEffect);

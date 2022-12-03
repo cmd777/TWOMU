@@ -187,32 +187,7 @@ func GetTWOM() {
 	//	MOVSS XMM1, dword ptr [TWOM+819490]
 	Outline = uintptr(BaseAddr) + 0x2164B0
 
-	fmt.Println("Checking if everything works. . . . . . .")
-	if TWOMPID != 0 {
-		fmt.Println("TWOM's PID was found!")
-	} else {
-		fmt.Println("TWOM's PID could NOT be found! (Is the game running? Is an antivirus blocking CreateToolhelp32Snapshot?)")
-	}
-
-	if HANDLE != 0 {
-		fmt.Println("TWOM's Handle was found!")
-	} else {
-		fmt.Println("TWOM's Handle could NOT be found! (Is the game running? Is an antivirus blocking OpenProcess?)")
-	}
-
-	if BaseAddr != 0 {
-		fmt.Println("TWOM's Base Address was found!")
-	} else {
-		fmt.Println("TWOM's Base Address could NOT be found! (Is the game running? Is an antivirus blocking Module operations?)")
-	}
-
-	testBuffer := memory.ReadProcessMemory(HANDLE, WndProc, 8)
-	if math.Float32frombits(binary.LittleEndian.Uint32(testBuffer)) != 0 {
-		fmt.Println("Reading Process Memory Works!")
-	} else {
-		fmt.Println("Failed to Read Process Memory (Is the game running? Is an antivirus blocking ReadProcessMemory?)")
-	}
-	fmt.Println("Finished.")
+	PrintMenu()
 }
 
 func PrintPatches() {
@@ -626,14 +601,12 @@ func FixCam() {
 			return
 		default:
 			<-S.C
-			Mutex.Lock()
 			CMBuffer = memory.ReadProcessMemory(HANDLE, CMode, 4)
 			CM = binary.LittleEndian.Uint32(CMBuffer)
 
 			if CM != 148602 {
 				memory.WriteProcessMemory(HANDLE, CMode, []byte{0x7A, 0x44, 0x02}, 3)
 			}
-			Mutex.Unlock()
 			if !S.Stop() {
 				S.Reset(10 * time.Millisecond)
 			}

@@ -16,15 +16,16 @@ var (
 	pGetForegroundWindow      = user32.MustFindProc("GetForegroundWindow")
 	PGetWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId")
 
-	kernel32            = syscall.MustLoadDLL("kernel32.dll")
-	pReadProcessMemory  = kernel32.MustFindProc("ReadProcessMemory")
-	pOpenProcess        = kernel32.MustFindProc("OpenProcess")
-	pWriteProcessMemory = kernel32.MustFindProc("WriteProcessMemory")
-	pOutputDebugStringW = kernel32.MustFindProc("OutputDebugStringW")
-
+	kernel32                  = syscall.MustLoadDLL("kernel32.dll")
+	pReadProcessMemory        = kernel32.MustFindProc("ReadProcessMemory")
+	pOpenProcess              = kernel32.MustFindProc("OpenProcess")
+	pWriteProcessMemory       = kernel32.MustFindProc("WriteProcessMemory")
+	pOutputDebugStringW       = kernel32.MustFindProc("OutputDebugStringW")
 	pCreateToolhelp32Snapshot = kernel32.MustFindProc("CreateToolhelp32Snapshot")
 	pProcess32FirstW          = kernel32.MustFindProc("Process32FirstW")
 	pProcess32NextW           = kernel32.MustFindProc("Process32NextW")
+	pVirtualAllocEx           = kernel32.MustFindProc("VirtualAllocEx")
+	pCreateRemoteThread       = kernel32.MustFindProc("CreateRemoteThread")
 
 	PSAPI                 = syscall.MustLoadDLL("psapi.dll")
 	pEnumProcessModules   = PSAPI.MustFindProc("EnumProcessModules")
@@ -166,7 +167,7 @@ func WriteProcessMemoryFloat(HANDLE, BaseAddr uintptr, ToWrite float32) {
 		OutputDebugStringW(fmt.Sprintf("WriteProcessMemoryFloat -> %v", err.Error()))
 	}
 }
-func WriteProcessMemory(HANDLE, BaseAddr uintptr, ToWrite []byte) {
+func WriteProcessMemory(HANDLE, BaseAddr uintptr, ToWrite []byte, nSize uintptr) {
 	written := 0
 
 	_, _, err := pWriteProcessMemory.Call(
@@ -179,7 +180,7 @@ func WriteProcessMemory(HANDLE, BaseAddr uintptr, ToWrite []byte) {
 		// We use a byte array here.
 		uintptr(unsafe.Pointer(&ToWrite[0])),
 		// [in]  SIZE_T  nSize,
-		uintptr(len(ToWrite)),
+		nSize,
 		// [out] SIZE_T  *lpNumberOfBytesWritten
 		uintptr(unsafe.Pointer(&written)),
 	)
@@ -325,4 +326,35 @@ func GetWindowThreadProcessId(HWND uintptr) (pid uint32) {
 func OutputDebugStringW(lpOutputString string) {
 	ptr, _ := syscall.UTF16PtrFromString(lpOutputString)
 	pOutputDebugStringW.Call(uintptr(unsafe.Pointer(&ptr)))
+}
+
+func VirtualAllocEx(HANDLE uintptr, lpAddress uintptr, dwSize uintptr, flAllocationType uintptr, flProtect uintptr) uintptr {
+	v, _, err := pVirtualAllocEx.Call(
+		HANDLE,
+		lpAddress,
+		dwSize,
+		flAllocationType,
+		flProtect,
+	)
+	if err.(syscall.Errno) != 0 {
+		OutputDebugStringW(fmt.Sprintf("VirtualAllocEx -> %v", err.Error()))
+	}
+	return v
+}
+
+func CreateRemoteThread(HANDLE uintptr, lpThreadAttributes uintptr, dwStackSize uintptr, lpStartAddress uintptr, lpParameter uintptr, dwCreationFlags uintptr) uintptr {
+	var ThreadID uint32
+	v, _, err := pCreateRemoteThread.Call(
+		HANDLE,
+		lpThreadAttributes,
+		dwStackSize,
+		lpStartAddress,
+		lpParameter,
+		dwCreationFlags,
+		uintptr(unsafe.Pointer(&ThreadID)),
+	)
+	if err.(syscall.Errno) != 0 {
+		OutputDebugStringW(fmt.Sprintf("CreateRemoteThread -> %v", err.Error()))
+	}
+	return v
 }

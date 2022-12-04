@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"syscall"
@@ -116,6 +117,9 @@ var (
 	Ceasefirep, Intensityp, WinterComesp, WinterHarshnessp, WinterLengthp uintptr
 	Ceasefire, Intensity, WinterComes, WinterHarshness, WinterLength      int
 
+	ExitRegex  = regexp.MustCompile(`(?mi)(exit|quit)`)
+	ClearRegex = regexp.MustCompile(`(?mi)(clear|cls)`)
+
 	Mutex sync.Mutex
 
 	S = time.NewTimer(10 * time.Millisecond)
@@ -183,32 +187,7 @@ func GetTWOM() {
 	//	MOVSS XMM1, dword ptr [TWOM+819490]
 	Outline = uintptr(BaseAddr) + 0x2164B0
 
-	fmt.Println("Checking if everything works. . . . . . .")
-	if TWOMPID != 0 {
-		fmt.Println("TWOM's PID was found!")
-	} else {
-		fmt.Println("TWOM's PID could NOT be found! (Is the game running? Is an antivirus blocking CreateToolhelp32Snapshot?)")
-	}
-
-	if HANDLE != 0 {
-		fmt.Println("TWOM's Handle was found!")
-	} else {
-		fmt.Println("TWOM's Handle could NOT be found! (Is the game running? Is an antivirus blocking OpenProcess?)")
-	}
-
-	if BaseAddr != 0 {
-		fmt.Println("TWOM's Base Address was found!")
-	} else {
-		fmt.Println("TWOM's Base Address could NOT be found! (Is the game running? Is an antivirus blocking Module operations?)")
-	}
-
-	testBuffer := memory.ReadProcessMemory(HANDLE, WndProc, 8)
-	if math.Float32frombits(binary.LittleEndian.Uint32(testBuffer)) != 0 {
-		fmt.Println("Reading Process Memory Works!")
-	} else {
-		fmt.Println("Failed to Read Process Memory (Is the game running? Is an antivirus blocking ReadProcessMemory?)")
-	}
-	fmt.Println("Finished.")
+	PrintMenu()
 }
 
 func PrintPatches() {
@@ -228,11 +207,7 @@ func PrintPatches() {
 	fmt.Scan(&Option)
 
 	switch Option {
-	//todo add regex (regexp.MatchString)
-	case "clear":
-		ClearScreen()
-		PrintPatches()
-	case "cls":
+	case ClearRegex.FindString(Option):
 		ClearScreen()
 		PrintPatches()
 	case "allow-more-instances":
@@ -340,6 +315,7 @@ func PrintMenu() {
 
 	fmt.Println("a) Toggle All")
 	fmt.Println("p) Patches")
+	fmt.Println("q) Inject TWOMUHook")
 	fmt.Println("cls|clear) Clear Screen")
 	fmt.Println("exit|quit Exit TWOMU")
 }
@@ -357,16 +333,12 @@ func main() {
 	for {
 		fmt.Scan(&Option)
 
+		Option = strings.ToLower(Option)
+
 		switch Option {
-		//todo add regex (regexp.MatchString)
-		case "exit":
+		case ExitRegex.FindString(Option):
 			os.Exit(0)
-		case "quit":
-			os.Exit(0)
-		case "clear":
-			ClearScreen()
-			PrintMenu()
-		case "cls":
+		case ClearRegex.FindString(Option):
 			ClearScreen()
 			PrintMenu()
 		case "1":
@@ -403,7 +375,7 @@ func main() {
 			if !DisablePEffect {
 				memory.NOP(HANDLE, Pencil, 9)
 			} else {
-				memory.WriteProcessMemory(HANDLE, Pencil, []byte{0xF3, 0x44, 0x0F, 0x10, 0x05, 0x35, 0x10, 0x4A, 0x00})
+				memory.WriteProcessMemory(HANDLE, Pencil, []byte{0xF3, 0x44, 0x0F, 0x10, 0x05, 0x35, 0x10, 0x4A, 0x00}, 9)
 			}
 			DisablePEffect = !DisablePEffect
 			ClearScreen()
@@ -412,7 +384,7 @@ func main() {
 			if !DisableRainEffect {
 				memory.NOP(HANDLE, Rain, 7)
 			} else {
-				memory.WriteProcessMemory(HANDLE, Rain, []byte{0x0F, 0xB7, 0x05, 0xB8, 0xD7, 0x72, 0x00})
+				memory.WriteProcessMemory(HANDLE, Rain, []byte{0x0F, 0xB7, 0x05, 0xB8, 0xD7, 0x72, 0x00}, 7)
 			}
 			DisableRainEffect = !DisableRainEffect
 			ClearScreen()
@@ -421,7 +393,7 @@ func main() {
 			if !DisableOutlines {
 				memory.NOP(HANDLE, Outline, 8)
 			} else {
-				memory.WriteProcessMemory(HANDLE, Outline, []byte{0xF3, 0x0F, 0x10, 0x0D, 0xD8, 0x2F, 0x60, 0x00})
+				memory.WriteProcessMemory(HANDLE, Outline, []byte{0xF3, 0x0F, 0x10, 0x0D, 0xD8, 0x2F, 0x60, 0x00}, 8)
 			}
 			DisableOutlines = !DisableOutlines
 			ClearScreen()
@@ -430,13 +402,11 @@ func main() {
 			if !ModifyWndProc {
 				memory.NOP(HANDLE, WndProc, 5)
 			} else {
-				memory.WriteProcessMemory(HANDLE, WndProc, []byte{0x83, 0xE8, 0x02, 0x74, 0x26})
+				memory.WriteProcessMemory(HANDLE, WndProc, []byte{0x83, 0xE8, 0x02, 0x74, 0x26}, 5)
 			}
 			ModifyWndProc = !ModifyWndProc
 			ClearScreen()
 			PrintMenu()
-		case "A":
-			fallthrough
 		case "a":
 			if !UseWASD {
 				go WASDControls()
@@ -477,8 +447,6 @@ func main() {
 			}
 			ClearScreen()
 			PrintMenu()
-		case "I":
-			fallthrough
 		case "i":
 			Ceasefirep = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x00, 0x34)
 			Intensityp = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x4B0, 0x08, 0x10, 0x30, 0x08, 0x34)
@@ -495,13 +463,12 @@ func main() {
 
 			LocationsToChoose = 8 + Ceasefire
 
-			memory.WriteProcessMemory(HANDLE, Ceasefirep, []byte{byte(Ceasefire)})
-			memory.WriteProcessMemory(HANDLE, Intensityp, []byte{byte(Intensity)})
-			memory.WriteProcessMemory(HANDLE, WinterComesp, []byte{byte(WinterComes)})
-			memory.WriteProcessMemory(HANDLE, WinterHarshnessp, []byte{byte(WinterHarshness)})
-			memory.WriteProcessMemory(HANDLE, WinterLengthp, []byte{byte(WinterLength)})
-		case "O":
-			fallthrough
+			memory.WriteProcessMemory(HANDLE, Ceasefirep, []byte{byte(Ceasefire)}, 1)
+			memory.WriteProcessMemory(HANDLE, Intensityp, []byte{byte(Intensity)}, 1)
+			memory.WriteProcessMemory(HANDLE, WinterComesp, []byte{byte(WinterComes)}, 1)
+			memory.WriteProcessMemory(HANDLE, WinterHarshnessp, []byte{byte(WinterHarshness)}, 1)
+			memory.WriteProcessMemory(HANDLE, WinterLengthp, []byte{byte(WinterLength)}, 1)
+			PrintMenu()
 		case "o":
 			LocationsPTR = memory.Offsets(HANDLE, uintptr(BaseAddr), 0x008A7998, 0x800, 0x220, 0x00, 0x00, 0x120, 0x10)
 
@@ -526,14 +493,37 @@ func main() {
 			}
 
 			for id, pointer := range LocationsAdded {
-				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00})
+				memory.WriteProcessMemory(HANDLE, pointer, []byte{byte(rand.Intn(LocationsData[id])), 0x00, 0x00, 0x00}, 4)
 			}
-
-		case "P":
-			fallthrough
+			PrintMenu()
 		case "p":
 			ClearScreen()
 			PrintPatches()
+		case "q":
+			fmt.Println("Attempting to Inject TWOMUHook")
+			path, err := os.Getwd()
+			if err != nil {
+				fmt.Println("Failed to get Current Directory")
+			}
+
+			dllPath := path + "\\TWOMUHook\\x64\\TWOMUHook.dll"
+
+			Valloc := memory.VirtualAllocEx(HANDLE, 0, uintptr(len(dllPath)+1), 0x00002000|0x00001000, 4)
+
+			memory.WriteProcessMemory(HANDLE, Valloc, []byte(dllPath), uintptr(len(dllPath)+1))
+
+			modKernel, err := syscall.LoadLibrary("kernel32.dll")
+			if err != nil {
+				memory.OutputDebugStringW(err.Error())
+			}
+
+			LoadLibrary, err := syscall.GetProcAddress(modKernel, "LoadLibraryA")
+			if err != nil {
+				memory.OutputDebugStringW(err.Error())
+			}
+
+			memory.CreateRemoteThread(HANDLE, 0, 0, LoadLibrary, Valloc, 0)
+			PrintMenu()
 		default:
 			fmt.Println(Option, "is not a valid option.")
 		}
@@ -611,14 +601,12 @@ func FixCam() {
 			return
 		default:
 			<-S.C
-			Mutex.Lock()
 			CMBuffer = memory.ReadProcessMemory(HANDLE, CMode, 4)
 			CM = binary.LittleEndian.Uint32(CMBuffer)
 
 			if CM != 148602 {
-				memory.WriteProcessMemory(HANDLE, CMode, []byte{0x7A, 0x44, 0x02})
+				memory.WriteProcessMemory(HANDLE, CMode, []byte{0x7A, 0x44, 0x02}, 3)
 			}
-			Mutex.Unlock()
 			if !S.Stop() {
 				S.Reset(10 * time.Millisecond)
 			}

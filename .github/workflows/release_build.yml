@@ -20,7 +20,9 @@ jobs:
           architecture: x64
           
       - name: Build for Windows amd64
-        run: go build -o TWOMU-x64.exe
+        run: |
+          go build -o TWOMU-x64.exe
+          go build -o SingleLoader.exe singleloader/singleloader.go
         
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
@@ -31,7 +33,7 @@ jobs:
         run: msbuild TWOMUHook\TWOMUHook.sln -property:Configuration=Release
         
       - name: Zip Files
-        run: 7z.exe a -mm=Deflate -mfb=258 -mpass=15 twomu.zip TWOMU-x64.exe TWOMUHook\x64\TWOMUHook.dll
+        run: 7z.exe a -mm=Deflate -mfb=258 -mpass=15 twomu.zip TWOMU-x64.exe SingleLoader.exe TWOMUHook\x64\TWOMUHook.dll
         
       - name: Release
         uses: softprops/action-gh-release@v1

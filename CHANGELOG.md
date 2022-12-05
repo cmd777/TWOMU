@@ -1,4 +1,43 @@
-## [v3.0.0-pre.2](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0-pre.2) (2022-10-28)
+## [v3.0.0](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0) (2022-12-04)
+
+### Added
+- MSBuild to build TWOMUHook
+- Solution files, they can be found in the `TWOMUHook` directory (compiling only works with the x64 version)
+- Regex to Go, this will find both cls and clear without case sensitivity
+- New option to Inject TWOMUHook (q)
+- Disable Pencil Effect, Disable Rain Effect, Disable Character Outlines, Modify WndProc to the ImGui version
+- NOP, Offsets Function to the ImGui version
+- WASD Controls to ImGui
+- Keyboard navigation option to ImGui
+
+### Changed
+- (Workflows) Runner to Windows
+- Files are now zipped
+- All inputs in Go are now lowercase, that means that Q will be registered as q
+
+<hr>
+
+## [v3.0.0-pre.4](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0-pre.4) (2022-12-02)
+## Added
+- NOP, Offsets Function to the ImGui version
+- WASD Controls to ImGui
+- Keyboard navigation option to ImGui
+## Removed
+- Nop Arrays from the ImGui version
+
+<hr>
+
+## [v3.0.0-pre.3](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0-pre.3) (2022-11-29)
+## Added
+- Regex to Go, this will find both cls and clear without case sensitivity
+- New option to Inject TWOMUHook (q)
+- Disable Pencil Effect, Disable Rain Effect, Disable Character Outlines, Modify WndProc to the ImGui version
+## Changed
+- All inputs in Go are now lowercase, that means that Q will be registered as q
+
+<hr>
+
+## [v3.0.0-pre.2](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0-pre.2) (2022-11-28)
 ## Added
 - MSBuild to build TWOMUHook
 - The built dll file to the zip file (the option to inject it is the same as the option used to find This War of Mine and calculate offsets - This will be changed.)
@@ -7,7 +46,7 @@
 
 <hr>
 
-## [v3.0.0-pre.1](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0-pre.1) (2022-10-25)
+## [v3.0.0-pre.1](https://github.com/cmd777/TWOMU/releases/tag/v3.0.0-pre.1) (2022-11-25)
 
 ### Added
 - (Workflows) G++ to build DllMain

@@ -181,6 +181,7 @@
     <ClInclude Include="dep\imgui\imstb_rectpack.h" />
     <ClInclude Include="dep\imgui\imstb_textedit.h" />
     <ClInclude Include="dep\imgui\imstb_truetype.h" />
+    <ClInclude Include="twomu_hooks.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dep\dxsdk\d3dx9math.inl" />

@@ -1,81 +1,4 @@
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <Psapi.h>
-#include <string>
-#include <mutex>
-
-#include "dep/dxsdk/d3d9.h"
-#include "dep/dxsdk/d3dx9.h"
-
-#include "dep/detours/detours.h"
-
-#include "dep/imgui/imgui.h"
-#include "dep/imgui/imgui_impl_dx9.h"
-#include "dep/imgui/imgui_impl_win32.h"
-
-#pragma comment (lib, "dep/dxsdk/d3d9.lib")
-#pragma comment (lib, "dep/dxsdk/d3dx9.lib")
-#pragma comment (lib, "dep/detours/detours.lib")
-
-#pragma region Typedef, vars
-
-WNDPROC V_WNDPROC = NULL;
-HWND V_HWND = NULL;
-HMODULE V_HMODULE = NULL;
-
-typedef HRESULT(__stdcall* EndScene)(IDirect3DDevice9* d3ddev9);
-EndScene V_EndScene;
-
-typedef HRESULT(__stdcall* Reset)(IDirect3DDevice9* d3ddev9, D3DPRESENT_PARAMETERS* d3dpp);
-Reset V_Reset;
-
-bool SHOW = true;
-bool INIT = false;
-
-bool WINIT = false;
-bool MINIT = false;
-bool CINIT = false;
-
-bool UseWASD = false;
-bool ReadMemory = false;
-bool FixCamera = false;
-bool DisablePEffect = false;
-bool DisableRainEffect = false;
-bool DisableOutlines = false;
-bool ModifyWndProc = false;
-
-DWORD PID;
-HANDLE TWOMHandle;
-INT64 BaseAddr;
-
-byte V_Pencil[] = { 0xF3, 0x44, 0x0F, 0x10, 0x05, 0x35, 0x10, 0x4A, 0x00 };
-byte V_Rain[] = { 0x0F, 0xB7, 0x05, 0xB8, 0xD7, 0x72, 0x00 };
-byte V_Outlines[] = { 0xF3, 0x0F, 0x10, 0x0D, 0xD8, 0x2F, 0x60, 0x00 };
-byte V_MWndProc[] = { 0x83, 0xE8, 0x02, 0x74, 0x26 };
-
-INT64 Pencil;
-INT64 Rain;
-INT64 Outlines;
-INT64 MWndProc;
-
-INT64 XArray[] = { 0x70 };
-INT64 YArray[] = { 0x78 };
-INT64 CArray[] = { 0xA6 };
-INT64 XPos;
-INT64 YPos;
-INT64 CMode;
-
-float Step = 0.2f;
-float X = 0.0f;
-float Y = 0.0f;
-
-int CM;
-
-std::mutex Mutex;
-
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-#pragma endregion
+#include "twomu_hooks.h"
 
 LRESULT __stdcall WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -104,9 +27,8 @@ void WASDControls()
 {
     for (;;)
     {
-        DWORD fgWPID = 0;
-        GetWindowThreadProcessId(GetForegroundWindow(), &fgWPID);
-        if (fgWPID == PID && UseWASD)
+        DWORD fgWPID;
+        if (GetWindowThreadProcessId(GetForegroundWindow(), &fgWPID); fgWPID == PID && UseWASD)
         {
             Mutex.lock();
             if (GetAsyncKeyState(0x57))
@@ -160,8 +82,7 @@ void FixCam()
 
             if (CM != 148602)
             {
-                CM = 148602;
-                WriteProcessMemory(TWOMHandle, (LPVOID)CMode, &CM, sizeof(CM), 0);
+                WriteProcessMemory(TWOMHandle, (LPVOID)CMode, &IdealCameraMode, sizeof(IdealCameraMode), 0);
             }
             Sleep(10);
         }
@@ -270,57 +191,50 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
         ImGui::GetStyle().WindowTitleAlign = ImVec2(0.5f, 0.5f);
 
-        ImGui::Checkbox("Use WASD", &UseWASD);
-        if (UseWASD && !WINIT)
-        {
+        if (ImGui::Checkbox("Use WASD", &UseWASD) && !WINIT) {
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)WASDControls, NULL, NULL, NULL);
             WINIT = true;
         }
 
-        ImGui::Checkbox("Store Game Memory", &ReadMemory);
-        if (ReadMemory && !MINIT)
-        {
+        if (ImGui::Checkbox("Store Game Memory", &ReadMemory) && !MINIT) {
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ReadMem, NULL, NULL, NULL);
             MINIT = true;
         }
 
-        ImGui::Checkbox("Fix Camera", &FixCamera);
-        if (FixCamera && !CINIT)
-        {
+        if (ImGui::Checkbox("Fix Camera", &FixCamera) && !CINIT) {
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)FixCam, NULL, NULL, NULL);
             CINIT = true;
         }
 
-        ImGui::Checkbox("Disable Pencil Effect", &DisablePEffect);
-        if (DisablePEffect) {
+        if (ImGui::Checkbox("Disable Pencil Effect", &DisablePEffect)) {
             NOP(TWOMHandle, (PVOID)Pencil, sizeof(V_Pencil));
-        }
-        else {
+        } else if (!DisablePEffect) {
             WriteProcessMemory(TWOMHandle, (PVOID)Pencil, V_Pencil, sizeof(V_Pencil), 0);
         }
 
-        ImGui::Checkbox("Disable Rain Effect", &DisableRainEffect);
-        if (DisableRainEffect) {
+        if (ImGui::Checkbox("Disable Rain Effect", &DisableRainEffect)) {
             NOP(TWOMHandle, (PVOID)Rain, sizeof(V_Rain));
-        }
-        else {
+        } else if (!DisableRainEffect) {
             WriteProcessMemory(TWOMHandle, (PVOID)Rain, V_Rain, sizeof(V_Rain), 0);
         }
 
-        ImGui::Checkbox("Disable Character Outlines", &DisableOutlines);
-        if (DisableOutlines) {
+        if (ImGui::Checkbox("Disable Character Outlines", &DisableOutlines)) {
             NOP(TWOMHandle, (PVOID)Outlines, sizeof(V_Outlines));
-        }
-        else {
+        } else if (!DisableOutlines) {
             WriteProcessMemory(TWOMHandle, (PVOID)Outlines, V_Outlines, sizeof(V_Outlines), 0);
         }
 
-        ImGui::Checkbox("Modify WndProc", &ModifyWndProc);
-        if (ModifyWndProc) {
+        if (ImGui::Checkbox("Modify WndProc", &ModifyWndProc)) {
             NOP(TWOMHandle, (PVOID)MWndProc, sizeof(V_MWndProc));
-        }
-        else {
+        } else if (!ModifyWndProc) {
             WriteProcessMemory(TWOMHandle, (PVOID)MWndProc, V_MWndProc, sizeof(V_MWndProc), 0);
+        }
+
+        if (ImGui::Button("Use Dark Theme")) {
+            DwmSetWindowAttribute(V_HWND, DWMWA_USE_IMMERSIVE_DARK_MODE, &DWMDarkThemeValue, sizeof(DWMDarkThemeValue));
+
+            PostMessage(V_HWND, WM_SYSCOMMAND, SC_MAXIMIZE, NULL);
+            PostMessage(V_HWND, WM_SYSCOMMAND, SC_RESTORE, NULL);
         }
 
         ImGui::Separator();

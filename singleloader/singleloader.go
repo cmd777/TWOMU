@@ -71,7 +71,7 @@ func GetTWOM() {
 func main() {
 	for !(TWOMPID > 0 && HANDLE > 0 && BaseAddr > 0) {
 		GetTWOM()
-		time.Sleep(5000 * time.Millisecond)
+		time.Sleep(5 * time.Second)
 	}
 	fmt.Printf("TWOM PID: %v\r\nTWOM Handle: %v\r\nTWOM Base Address: %v\r\n", TWOMPID, HANDLE, BaseAddr)
 	path, err := os.Getwd()
@@ -82,7 +82,7 @@ func main() {
 	}
 	fmt.Println("Working Directory is ->", path)
 
-	dllPath := path + "\\TWOMUHook\\x64\\TWOMUHook.dll"
+	dllPath := fmt.Sprintf(`%v\TWOMUHook\x64\TWOMUHook.dll`, path)
 
 	if _, err := os.Stat(dllPath); err != nil {
 		fmt.Println("Failed to get dllPath... ->", err)

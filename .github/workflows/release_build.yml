@@ -19,21 +19,58 @@ jobs:
           check-latest: true
           architecture: x64
           
-      - name: Build for Windows amd64
-        run: |
-          go build -o TWOMU-x64.exe
-          go build -o SingleLoader.exe singleloader/singleloader.go
-        
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v1.1
         with:
           msbuild-architecture: x64
           
-      - name: Build TWOMUHook
+      - name: Build TWOMU [amd64]
+        run: |
+          go build -o TWOMU-x64.exe
+          go build -o SingleLoader.exe singleloader/singleloader.go
+          
+      - name: Download DirectX SDK
+        run: curl -o DXSDK_Jun10.exe https://download.microsoft.com/download/A/E/7/AE743F1F-632B-4809-87A9-AA1BB3458E31/DXSDK_Jun10.exe
+        
+      - name: Extract DirectX SDK
+        run: 7z e DXSDK_Jun10.exe -oTWOMUHook\dep\dxsdk DXSDK\Lib\x64\d3d9.lib DXSDK\Lib\x64\d3dx9.lib DXSDK\Include\d3d9*.h DXSDK\Include\d3dx9*.* -r
+        
+      - name: Checkout ImGui
+        uses: actions/checkout@v3
+        with:
+          path: tmpdep/imgui
+          repository: ocornut/imgui
+          
+      - name: Move ImGui
+        run: |
+          mkdir ../../TWOMUHook\dep\imgui
+          move im*.* ../../TWOMUHook\dep\imgui
+          move backends\imgui_impl_dx9.* ../../TWOMUHook\dep\imgui
+          move backends\imgui_impl_win32.* ../../TWOMUHook\dep\imgui
+        working-directory: tmpdep/imgui
+        
+      - name: Checkout Detours
+        uses: actions/checkout@v3
+        with:
+          path: tmpdep/detours
+          repository: microsoft/Detours
+          
+      - name: Build Detours
+        run: msbuild vc\Detours.sln -property:Configuration=ReleaseMD -property:Platform=x64
+        working-directory: tmpdep/detours
+        
+      - name: Move Detours
+        run: |
+          mkdir ../../TWOMUHook\dep\detours
+          move include\detours.h ../../TWOMUHook\dep\detours
+          move lib.X64\detours.* ../../TWOMUHook\dep\detours
+        working-directory: tmpdep/detours
+        
+      - name: Build TWOMUHook [amd64]
         run: msbuild TWOMUHook\TWOMUHook.sln -property:Configuration=Release
         
       - name: Zip Files
-        run: 7z.exe a -mm=Deflate -mfb=258 -mpass=15 twomu.zip TWOMU-x64.exe SingleLoader.exe TWOMUHook\x64\TWOMUHook.dll
+        run: 7z a -mm=Deflate -mfb=258 -mpass=15 twomu.zip TWOMU-x64.exe SingleLoader.exe TWOMUHook\x64\TWOMUHook.dll
         
       - name: Release
         uses: softprops/action-gh-release@v1

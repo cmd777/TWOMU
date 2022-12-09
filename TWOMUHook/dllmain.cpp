@@ -27,8 +27,10 @@ void WASDControls()
 {
     for (;;)
     {
+        if (!UseWASD) { return; }
+
         DWORD fgWPID;
-        if (GetWindowThreadProcessId(GetForegroundWindow(), &fgWPID); fgWPID == PID && UseWASD)
+        if (GetWindowThreadProcessId(GetForegroundWindow(), &fgWPID); fgWPID == PID)
         {
             Mutex.lock();
             if (GetAsyncKeyState(0x57))
@@ -61,14 +63,13 @@ void ReadMem()
 {
     for (;;)
     {
-        if (ReadMemory)
-        {
-            Mutex.lock();
-            ReadProcessMemory(TWOMHandle, (LPVOID)XPos, &X, sizeof(X), 0);
-            ReadProcessMemory(TWOMHandle, (LPVOID)YPos, &Y, sizeof(Y), 0);
-            Mutex.unlock();
-            Sleep(10);
-        }
+        if (!ReadMemory) { return; }
+
+        Mutex.lock();
+        ReadProcessMemory(TWOMHandle, (LPVOID)XPos, &X, sizeof(X), 0);
+        ReadProcessMemory(TWOMHandle, (LPVOID)YPos, &Y, sizeof(Y), 0);
+        Mutex.unlock();
+        Sleep(10);
     }
 }
 
@@ -76,16 +77,14 @@ void FixCam()
 {
     for (;;)
     {
-        if (FixCamera)
-        {
-            ReadProcessMemory(TWOMHandle, (LPVOID)CMode, &CM, sizeof(CM), 0);
+        if (!FixCamera) { return; }
 
-            if (CM != 148602)
-            {
-                WriteProcessMemory(TWOMHandle, (LPVOID)CMode, &IdealCameraMode, sizeof(IdealCameraMode), 0);
-            }
-            Sleep(10);
+        ReadProcessMemory(TWOMHandle, (LPVOID)CMode, &CM, sizeof(CM), 0);
+        if (CM != 148602)
+        {
+            WriteProcessMemory(TWOMHandle, (LPVOID)CMode, &IdealCameraMode, sizeof(IdealCameraMode), 0);
         }
+        Sleep(10);
     }
 }
 
@@ -191,19 +190,22 @@ HRESULT __stdcall HookEndScene(IDirect3DDevice9* d3ddev9)
 
         ImGui::GetStyle().WindowTitleAlign = ImVec2(0.5f, 0.5f);
 
-        if (ImGui::Checkbox("Use WASD", &UseWASD) && !WINIT) {
+        ImGui::Text("Running TWOMU Version %s", TWOMU_VERSION);
+
+        ImGui::Text("Using ImGui Version %s (%d)", IMGUI_VERSION, IMGUI_VERSION_NUM);
+
+        if (ImGui::Checkbox("Use WASD", &UseWASD)) {
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)WASDControls, NULL, NULL, NULL);
-            WINIT = true;
         }
 
-        if (ImGui::Checkbox("Store Game Memory", &ReadMemory) && !MINIT) {
+        ImGui::SliderFloat("Step Value", &Step, 0.1f, 2.0f, "%.1f");
+
+        if (ImGui::Checkbox("Store Game Memory", &ReadMemory)) {
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)ReadMem, NULL, NULL, NULL);
-            MINIT = true;
         }
 
-        if (ImGui::Checkbox("Fix Camera", &FixCamera) && !CINIT) {
+        if (ImGui::Checkbox("Fix Camera", &FixCamera)) {
             CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)FixCam, NULL, NULL, NULL);
-            CINIT = true;
         }
 
         if (ImGui::Checkbox("Disable Pencil Effect", &DisablePEffect)) {

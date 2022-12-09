@@ -20,6 +20,8 @@
 #pragma comment (lib, "dep/dxsdk/d3dx9.lib")
 #pragma comment (lib, "dep/detours/detours.lib")
 
+#define TWOMU_VERSION "v3.0.1-EXPERIMENTAL"
+
 WNDPROC V_WNDPROC = NULL;
 HWND V_HWND = NULL;
 HMODULE V_HMODULE = NULL;
@@ -32,10 +34,6 @@ Reset V_Reset;
 
 bool SHOW = true;
 bool INIT = false;
-
-bool WINIT = false;
-bool MINIT = false;
-bool CINIT = false;
 
 bool UseWASD = false;
 bool ReadMemory = false;

@@ -67,4 +67,50 @@ Attempting to set random values in the My Stories tab after leaving a previously
 
 Aside from the antivirus being confused by the app's structure, it may also detect that the program imports user32.dll, kernel32.dll, psapi.dll, and that it calls function like GetAsyncKeyState, Read/Write ProcessMemory, it will mark the app as a virus.
 
-It's open source, if you don't want to use the pre-built exe, you can also compile the application yourself
+There is an extremely high chance that the antivirus will detect TWOMUHook.dll as well.
+
+**Why?**
+
+It does the same things the Go version does, except, it hooks onto DirectX's EndScene using Detours, and that's a big no-no from antiviruses.
+
+It's open source, you can build everything for yourself, and change things that don't suit your liking
+
+# Can I run it on Linux?
+
+Yes, you can! It requires some tinkering though.
+
+1. Download the latest [TWOMU](https://github.com/cmd777/TWOMBC/releases/latest) Version
+2. Install [Wine](https://wiki.winehq.org/Download)
+3. Change Steam Compatability to Proton
+    - Right click on This War of Mine
+    - Go to Properties
+    - Click on Compatability
+    - Check `Force the use of a specific Steam Play compatability tool`
+    - Select the latest proton version (right under Proton Experimental)
+4. Paste the TWOMUHook directory to `/<STEAM_PATH>/SteamLibrary/steamapps/compatdata/282070/pfx` (If you wish to use the ImGui version, if not, skip this step.)
+5. Open your terminal, and paste the following command
+    - `STEAM_COMPAT_CLIENT_INSTALL_PATH=... STEAM_COMPAT_DATA_PATH=... WINEPREFIX=$PWD {PROTONPATH} run "/<TWOMU_INSTALL_PATH>/TWOMU-x64.exe"`
+
+STEAM_COMPAT_CLIENT_INSTALL_PATH is where ".steam/steam" is. (if `apt install steam` was used, it should be `"$HOME/.steam/steam"`)
+
+STEAM_COMPAT_DATA_PATH is where steam installed the game (for example, `"/<STEAM_PATH>/SteamLibrary/steamapps/compatdata/282070"`)
+
+PROTONPATH is where proton is installed (should be in steam's root directory, `"/home/<USERNAME>/.steam/root/steamapps/common/Proton 7.0/proton"`)
+
+## Limitations
+
+Unforunately, it's not perfect yet, and some functions don't work well.
+
+| Function                  | Compatability         |
+| :---:                     | :---:                 |
+| UseWASD                   | :heavy_check_mark:    |
+| ReadMemory                | :heavy_check_mark:    |
+| FixCamera                 | :heavy_check_mark:    |
+| Disable Pencil Effect     | :interrobang:         |
+| Disable Rain Effect       | :interrobang:         |
+| Disable Outlines          | :interrobang:         |
+| Modify WndProc            | :heavy_check_mark:    |
+
+:heavy_check_mark: - The function works without issues
+
+:interrobang: - The function works, but is prone to bugs.
